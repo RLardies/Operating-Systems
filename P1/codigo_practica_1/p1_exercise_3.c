@@ -9,25 +9,24 @@
 int main(void)
 {
 	pid_t pid;
-	int i;
-	for(i = 0; i < NUM_PROC; i++)
-	{
+	int i, wstatus;
+
+	for(i = 0; i < NUM_PROC; i++) {
 		pid = fork();
 		if(pid <  0)
 		{
 			printf("Error al emplear fork\n");
 			exit(EXIT_FAILURE);
 		}
-		else if(pid ==  0)
-		{
-			sleep(i);
-			printf("HIJO %d PADRE %d\n", getpid(), getppid());
-			exit(EXIT_SUCCESS);
-		}
 		else if(pid >  0)
 		{
+			printf("HIJO %d PADRE %d\n", getpid(), getppid());
+			waitpid(pid, &wstatus, 0);
+			exit(EXIT_SUCCESS);
+		}
+		else if(pid ==  0)
+		{
 			printf("PADRE %d\n", i);
-			wait(NULL);
 		}
 	}
 	exit(EXIT_SUCCESS);
