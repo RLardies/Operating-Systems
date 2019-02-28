@@ -1,12 +1,14 @@
 /* wait and return process info */
 #include <sys/types.h>
+/* funciones que esperan que terminen procesos */
 #include <sys/wait.h>
 /* standard input/output */
 #include <stdio.h>
 /* malloc, free */
-#include <stdlib.h> /* library for exec */
+#include <stdlib.h>
+/* library for exec */
 #include <unistd.h>
-//for comparing strings
+/*for comparing strings*/
 #include<string.h>
 
 /*
@@ -67,16 +69,23 @@ void  processCat () {
    	 
      pid_t hijo;
 
+     /**
+      * Cremos el proceso que va a realizar el execvp.
+      */
      if ((hijo = fork()) < 0) exit(EXIT_FAILURE);
 
      else if (hijo == 0){
 
        execvp("cat", args);
+       /**
+        * La única razón por la que esta parte del código puede ejecutarse es porque
+        * ha habido algún error en la realización del exec, por tanto termina el 
+        * proceso con error.
+        */
+       printf("Error realizando el exec.\n");
        exit (EXIT_FAILURE);
      }
-   	 
     }
-
     /* Liberamos la memoria dinamica reservada por el proceso */
     free (args);
     /* liberamos la memoria reservada por getline */
@@ -87,11 +96,20 @@ void  showAllFiles () {
     
     pid_t hijo;
 
+    /**
+      * Cremos el proceso que va a realizar el execlp.
+      */
     if ((hijo = fork()) < 0) exit(EXIT_FAILURE);
 
     else if (hijo == 0){
 
       execlp("ls", "ls", "-l", NULL);
+      /**
+        * La única razón por la que esta parte del código puede ejecutarse es porque
+        * ha habido algún error en la realización del exec, por tanto termina el 
+        * proceso con error.
+        */
+      printf("Error realizando el exec.\n");
       exit (EXIT_FAILURE);
     }
 }
