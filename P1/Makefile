@@ -1,33 +1,33 @@
-##
+###################
+
 CC = gcc
-EXE = ejercicio3 ejercicio4 ejercicio5 ejercicio7 ejercicio9 ejercicio11 ejercicio12
-##
+EXE = ejercicio3 ejercicio4 ejercicio5 ejercicio7 ejercicio9 ejercicio12
+LIBFLAGS = -lm -pthread
+
+###################
 
 all: $(EXE)
 
-$(EXE) : % : %.o
-	$(CC) -o $@ $@.o -lm -pthread
+$(EXE) : % : %.c
+	$(CC) $@.c -o $@ $(LIBFLAGS)
 
 clean:
 	rm -f *.o core $(EXE)
 
 vej3:
-	valgrind --leak-check:full ./ej3
+	valgrind --leak-check:full ./ejercicio3
 
 vej4:
-	valgrind --leak-check:full ./ej4
+	valgrind --leak-check:full ./ejercicio4
 
 vej5:
-	valgrind --leak-check:full ./ej5
+	valgrind --leak-check:full ./ejercicio5
 
 vej7:
-	valgrind --leak-check:full ./ej7
+	valgrind --leak-check:full ./ejercicio7
 
 vej9:
-	valgrind --leak-check:full ./ej9
-
-vej11:
-	valgrind --leak-check:full ./ej11
+	valgrind --leak-check:full ./ejercicio9
 
 vej12:
-	valgrind --leak-check:full ./ej12
+	valgrind --leak-check:full ./ejercicio12

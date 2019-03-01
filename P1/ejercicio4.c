@@ -1,3 +1,17 @@
+/**
+ * Archivo: ejercicio4.c
+ * 
+ * Autores: Carlos Gómez-Lobo Hernaiz -- carlos.gomez-lobo@estudiante.uam.es
+ *			Rodrigo Lardiés Guillén   -- rodrigo.lardies@estudiante.uam.es
+ *
+ *	Grupo: 2202
+ *
+ *	Fecha: 01/02/2019
+ *
+ *	Este programa es similar al anterior pero cada hijo genera a su vez otro froceso,
+ *	tantas veces como NUM_PROC valga y esperando cada uno a que su hijo termine.
+ */
+
 /* uso del input y output estándar */
 #include <stdio.h>
 /* para la memoria dinámica */

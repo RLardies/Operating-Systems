@@ -1,3 +1,17 @@
+/**
+ * Archivo: ejercicio12.c
+ * 
+ * Autores: Carlos Gómez-Lobo Hernaiz -- carlos.gomez-lobo@estudiante.uam.es
+ *          Rodrigo Lardiés Guillén   -- rodrigo.lardies@estudiante.uam.es
+ *
+ *  Grupo: 2202
+ *
+ *  Fecha: 01/02/2019
+ *
+ *  Este programa es un ejemplo de uso de los hilos, utilizando uno para calcular
+ *  cada potencia de 2 desde 0 hasta el valor de la macro N.
+ */
+
 /* uso del input y output estándar */
 #include <stdio.h>
 /* para la memoria dinámica */

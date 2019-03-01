@@ -1,6 +1,17 @@
-/*
- * Ejemplo de codigo que genera un numero aleatorio y lo muestra por pantalla
+/**
+ * Archivo: ejercicio9.c
+ * 
+ * Autores: Carlos Gómez-Lobo Hernaiz -- carlos.gomez-lobo@estudiante.uam.es
+ *		 	Rodrigo Lardiés Guillén   -- rodrigo.lardies@estudiante.uam.es
+ *
+ *	Grupo: 2202
+ *
+ *	Fecha: 01/02/2019
+ *
+ *	Este programa es un ejemplo de comunicación entre procesos a través de pipes,
+ *	haciendo el proceso padre de mediador entre sus procesos hijos.
  */
+ 
 /* uso del input y output estándar */
 #include <stdio.h>
 /* para la memoria dinámica */

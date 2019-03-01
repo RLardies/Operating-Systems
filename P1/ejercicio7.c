@@ -1,3 +1,17 @@
+/**
+ * Archivo: ejercicio7.c
+ * 
+ * Autores: Carlos Gómez-Lobo Hernaiz -- carlos.gomez-lobo@estudiante.uam.es
+ *          Rodrigo Lardiés Guillén   -- rodrigo.lardies@estudiante.uam.es
+ *
+ *  Grupo: 2202
+ *
+ *  Fecha: 01/02/2019
+ *
+ *  Este ejercicio es un ejemplo de ejecución de los comandos exec, mostrando los
+ *  ficheros del directorio actual, pidiendo algunos en concreto y mostrando su contenido.
+ */
+
 /* wait and return process info */
 #include <sys/types.h>
 /* funciones que esperan que terminen procesos */

@@ -1,3 +1,17 @@
+/**
+ * Archivo: ejercicio3.c
+ * 
+ * Autores: Carlos Gómez-Lobo Hernaiz -- carlos.gomez-lobo@estudiante.uam.es
+ *			Rodrigo Lardiés Guillén   -- rodrigo.lardies@estudiante.uam.es
+ *
+ *	Grupo: 2202
+ *
+ *	Fecha: 01/02/2019
+ *
+ *	En este programa el proceso padre crea tantos procesos hijos como valor tenga
+ *	la macro NUM_PROC e imprimiendo çada uno información sobre cada proceso.
+ */
+
 /* uso del input y output estándar */
 #include <stdio.h>
 /* para la memoria dinámica */

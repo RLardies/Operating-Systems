@@ -1,3 +1,19 @@
+/**
+ * Archivo: ejercicio5.c
+ * 
+ * Autores: Carlos Gómez-Lobo Hernaiz -- carlos.gomez-lobo@estudiante.uam.es
+ *			Rodrigo Lardiés Guillén   -- rodrigo.lardies@estudiante.uam.es
+ *
+ *	Grupo: 2202
+ *
+ *	Fecha: 01/02/2019
+ *
+ *	En este ejercicio comprobamos que dos procesos distintos no comparten memoria 
+ *	reservando memoria en uno y modificándola en otro, y viendo que solo es modificada
+ *	en ese preoceso y no en el padre. Además vemos que, al ser memorias individuales, 
+ *	hay que liberarlas por separado.
+ */
+
 /* uso del input y output estándar */
 #include <stdio.h>
 /* para la memoria dinámica */
