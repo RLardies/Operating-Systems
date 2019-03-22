@@ -42,11 +42,13 @@ typedef struct {
  * @param      arg   La variable de la estructura Args que contiene el exponente y la 
  *                   variable en la que se deberá guardar el resultado.
  */
-void power_2 (void *arg){
+void *power_2 (void *arg){
 
   Args *args = arg;
 
   args->output = pow(2, args->x);
+
+  return arg;
 }
 
 int main(int argc , char *argv[]) {
@@ -57,7 +59,7 @@ int main(int argc , char *argv[]) {
 
   for(i=0;i<N;i++){
     args[i].x = i;
-    pthread_create(h + i, NULL, (void *) power_2, args + i);
+    pthread_create(h + i, NULL, power_2, args + i);
   }
 
   for (i = 0; i < N; i++){
