@@ -25,8 +25,9 @@ int main (){
 			printf("Soy el proceso hijo %d y ya me toca terminar.\n", getpid());
 			exit(EXIT_SUCCESS);
 		}
-		sleep(5);
-		kill(pid, SIGTERM);
+		else
+			sleep(5);
+			kill(pid, SIGTERM);
 	}
 
 	return EXIT_SUCCESS;
