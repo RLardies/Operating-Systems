@@ -10,6 +10,7 @@
 void manejador_SIGTERM(int sig) {
 
 	printf("Soy %lld y he recibido la señal SIGTERM.\n", (long long) getpid());
+	fflush(stdout);
 	exit(EXIT_SUCCESS);
 }
 
