@@ -22,4 +22,5 @@ int main(void) {
 	}
 
 	printf("Mandamos la señal SIGKILL: \n");
+	kill(getpid(), SIGKILL);
 }
