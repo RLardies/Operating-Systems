@@ -6,21 +6,18 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <time.h>
 
 #define SEM "/mi_sefamoro"
 #define N_PROC 5
 #define FILENAME "carrera"
-
-void manejador_SIGTERM(int sig) {
-	exit(EXIT_SUCCESS);
-}
 
 int check_file(int fd) {
 
 	int buf, acum[N_PROC] = { 0 }, ret = -1, i;
 
 	lseek(fd, 0, SEEK_SET);
-	while (read(fd, &buf, sizeof(buf)) != 0)
+	while (read(fd, &buf, sizeof(buf)) > 0)
 		if (++acum[buf] == 20 && ret == -1) ret = buf;
 
 	for (i = 0; i < N_PROC; i++)
@@ -38,13 +35,14 @@ int main() {
 	pid_t pid;
 	sem_t *sem;
 	int i, file, res;
-	struct sigaction act;
 	sigset_t mask;
 
 	if ((sem = sem_open(SEM, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 0)) == SEM_FAILED) {
 		perror("Error creando semaforo");
 		exit(EXIT_FAILURE);
 	}
+	/*Hacemos unlink del semaforo para que cuando terminen todos los procesos se borre*/
+	sem_unlink(SEM);
 
 	for (i = 0; i < N_PROC; i++) {
 		if ((pid = fork()) < 0) {
@@ -52,12 +50,9 @@ int main() {
 			exit(EXIT_FAILURE);
 		}
 		if (pid == 0) {
-			act.sa_handler = manejador_SIGTERM;
-			if (sigaction(SIGTERM, &act, NULL) < 0) {
-				perror("Error en sigaction");
-				sem_close(sem);
-				exit(EXIT_FAILURE);
-			}
+			/*Modificamos la semilla para que no tengan todos la misma y que sea distinta 
+			 cada vez que se ejecute*/
+			srand((time(NULL) * i + 200));
 
 			while(1) {
 				sem_wait(sem);
@@ -83,8 +78,8 @@ int main() {
 				}
 
 				sem_post(sem);
-
-				usleep(random() * 100000.0/ RAND_MAX);
+				/*Hacemos un usleep de un numero aleatorio entre 0 y 100000 microsegundos (0.1 segundos)*/
+				usleep(random() * 100000.0 / RAND_MAX);
 			}
 		}
 	}
@@ -93,10 +88,9 @@ int main() {
 	sigaddset(&mask, SIGTERM);
 	sigprocmask(SIG_SETMASK, &mask, NULL);
 
-	if ((file = open(FILENAME, O_CREAT | O_RDONLY, S_IRUSR | S_IWUSR)) < 0) {
+	if ((file = open(FILENAME, O_CREAT | O_RDONLY | O_TRUNC, S_IRUSR | S_IWUSR)) < 0) {
 		perror("Error abriendo el archivo");
 		sem_close(sem);
-		sem_unlink(SEM);
 		exit(EXIT_FAILURE);
 	}
 
@@ -111,7 +105,6 @@ int main() {
 
 			while(wait(NULL) > 0);
 			sem_close(sem);
-			sem_unlink(SEM);
 			close(file);
 			exit(EXIT_SUCCESS);
 		}
