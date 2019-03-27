@@ -59,20 +59,29 @@ int main() {
 				exit(EXIT_FAILURE);
 			}
 
-			if ((file = open(FILENAME, O_CREAT | O_APPEND | O_WRONLY , S_IRUSR | S_IWUSR)) < 0) {
-				perror("Error abriendo el archivo");
-				sem_close(sem);
-				exit(EXIT_FAILURE);
-			}
-
 			while(1) {
 				sem_wait(sem);
-				if (write(file, &i, sizeof(i)) != sizeof(i)) {
-					perror("Error escribiendo en el archivo");
+
+				if ((file = open(FILENAME, O_CREAT | O_APPEND | O_WRONLY , S_IRUSR | S_IWUSR)) < 0) {
+					perror("Error abriendo el archivo");
 					sem_post(sem);
 					sem_close(sem);
 					exit(EXIT_FAILURE);
 				}
+				if (write(file, &i, sizeof(i)) != sizeof(i)) {
+					perror("Error escribiendo en el archivo");
+					sem_post(sem);
+					sem_close(sem);
+					close(file);
+					exit(EXIT_FAILURE);
+				}
+				if (close(file) < 0) {
+					perror("Error abriendo el archivo");
+					sem_post(sem);
+					sem_close(sem);
+					exit(EXIT_FAILURE);
+				}
+
 				sem_post(sem);
 
 				usleep(random() * 100000.0/ RAND_MAX);
