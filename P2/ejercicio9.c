@@ -12,20 +12,17 @@
 #define N_PROC 5
 #define FILENAME "carrera"
 
-int check_file(int fd) {
+/*Cuenta las veces que ha escrito cada hijo y decide si hay algun ganador*/
+int check_file(int fd, int *acum) {
 
-	int buf, acum[N_PROC] = { 0 }, ret = -1, i;
+	int buf, ret = -1, i;
 
-	lseek(fd, 0, SEEK_SET);
 	while (read(fd, &buf, sizeof(buf)) > 0)
 		if (++acum[buf] == 20 && ret == -1) ret = buf;
 
 	for (i = 0; i < N_PROC; i++)
 		printf("Puntuacion del proceso %d: %d\n", i, acum[i]);
 	printf("\n\n");
-
-	if (ret == -1)
-		close(open(FILENAME, O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR));
 
 	return ret;
 }
@@ -36,6 +33,7 @@ int main() {
 	sem_t *sem;
 	int i, file, res;
 	sigset_t mask;
+	int acum[N_PROC] = { 0 };
 
 	if ((sem = sem_open(SEM, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 0)) == SEM_FAILED) {
 		perror("Error creando semaforo");
@@ -83,7 +81,7 @@ int main() {
 			}
 		}
 	}
-
+	/*Bloqueamos la señal SIGTERM para que cuando la mande a todo el grupo no termine el padre*/
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGTERM);
 	sigprocmask(SIG_SETMASK, &mask, NULL);
@@ -99,10 +97,12 @@ int main() {
 		sleep(1);
 		sem_wait(sem);
 
-		if ((res = check_file(file)) >= 0) {
+		if ((res = check_file(file, acum)) >= 0) {
 			printf("La carrera a terminado y el ganador ha sido el proceso %d.\n", res);
+			/*Manda la señal a los hijos*/
 			kill(0, SIGTERM);
 
+			/*Espera a que terminen los hijos*/
 			while(wait(NULL) > 0);
 			sem_close(sem);
 			close(file);

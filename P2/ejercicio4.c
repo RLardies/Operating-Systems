@@ -38,12 +38,10 @@ int main () {
 	}
 
 	if ((pid = fork()) < 0) {
-
 		perror("Error creando el gestor");
 		exit(EXIT_FAILURE);
 	}
-	else if (pid == 0) {
-		
+	if (pid == 0) {
 		act.sa_handler = manejador_gestor;
 		act.sa_flags = 0;
 		if (sigaction(SIGUSR2, &act, NULL) < 0) {
@@ -63,8 +61,7 @@ int main () {
 				perror("Error creando uno de los participantes");
 				exit(EXIT_FAILURE);
 			}
-			else if (pid2 == 0) {
-
+			if (pid2 == 0) {
 				act.sa_handler = manejador_corredor;
 				act.sa_flags = 0;
 				if (sigaction(SIGUSR1, &act, NULL) < 0) {
@@ -86,17 +83,16 @@ int main () {
 		exit(EXIT_SUCCESS);
 
 	}
-	else{
-		act2.sa_handler = SIG_IGN;
-		act2.sa_flags = 0;
-		if (sigaction(SIGUSR1, &act2, NULL)) {
-			perror("Error en sigaction");
-			exit(EXIT_FAILURE);
-		}
-
-		pause();
-
-		wait(NULL);
+	
+	act2.sa_handler = SIG_IGN;
+	act2.sa_flags = 0;
+	if (sigaction(SIGUSR1, &act2, NULL)) {
+		perror("Error en sigaction");
+		exit(EXIT_FAILURE);
 	}
+
+	pause();
+
+	wait(NULL);
 	return EXIT_SUCCESS;
 }

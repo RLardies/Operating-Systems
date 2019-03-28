@@ -16,6 +16,7 @@ int main(void) {
 	act.sa_handler = manejador;
 	sigemptyset(&(act.sa_mask));
 	act.sa_flags = 0;
+	/*Como la señal SIGKILL no es bloqueable la función sigaction devuelve error*/
 	if (sigaction(SIGKILL, &act, NULL) < 0) {
 		perror("Error en la funcion sigaction");
 		exit(EXIT_FAILURE);
