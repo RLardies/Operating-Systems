@@ -6,8 +6,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define N_READ 5
-#define SECS 5
+#define N_READ 10
+#define SECS 0
 #define SEM "/sem_lesctura"
 #define SEM2 "/sem_escritura"
 #define SEM3 "/sem_lectores"
@@ -53,7 +53,7 @@ int main(void) {
 	}
 	sem_unlink(SEM2);
 
-	if ((sem_lectores = sem_open(SEM3, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1)) == SEM_FAILED) {
+	if ((sem_lectores = sem_open(SEM3, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 0)) == SEM_FAILED) {
 		perror("sem_open3");
 		exit(EXIT_FAILURE);
 	}
@@ -110,12 +110,7 @@ int main(void) {
 		perror("sigaction");
 		exit(EXIT_FAILURE);
 	}
-	act.sa_handler = SIG_IGN;
-	if (sigaction(SIGTERM, &act, NULL) < 0) {
-		perror("sigaction");
-		exit(EXIT_FAILURE);
-	}
-
+	
 	while(1){
 		sem_wait(sem_escritura);
 		escritura(getpid());
