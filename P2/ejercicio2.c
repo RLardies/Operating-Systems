@@ -17,7 +17,7 @@ int main (){
 			perror("Error creando el proceso.\n");
 			exit (EXIT_FAILURE);
 		}
-		else if (pid == 0){
+		if (pid == 0){
 
 			printf("Soy el proceso hijo %d\n", getpid());
 			sleep(30);
@@ -25,9 +25,9 @@ int main (){
 			printf("Soy el proceso hijo %d y ya me toca terminar.\n", getpid());
 			exit(EXIT_SUCCESS);
 		}
-		else
-			sleep(5);
-			kill(pid, SIGTERM);
+		sleep(5);
+		/*Manda terminar al último hijo que ha creado*/
+		kill(pid, SIGTERM);
 	}
 
 	return EXIT_SUCCESS;
