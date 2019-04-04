@@ -37,6 +37,7 @@ int main(int argc, char *argv[]) {
 
 	struct sigaction act;
 	pid_t pid;
+	sigset_t mask;	
 	int fd, n = atoi(argv[1]), i;
 	char name[NAME_MAX];
 
@@ -59,7 +60,7 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	if ((cinfo = (ClientInfo *) mmap(NULL, sizeof(ClientInfo), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == NULL) {
+	if ((cinfo = (ClientInfo *) mmap(NULL, sizeof(ClientInfo), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == MAP_FAILED) {
 		perror("Error en mmap");
 		close(fd);
 		exit(EXIT_FAILURE);
@@ -73,6 +74,10 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	sem_unlink(SEM);
+
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGUSR1);
+	sigprocmask(SIG_SETMASK, &mask, NULL);
 
 	for (i = 0; i < n; i++) {
 		if ((pid = fork()) < 0) {
@@ -99,8 +104,11 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	sigemptyset(&mask);
+	sigprocmask(SIG_SETMASK, &mask, NULL);
+	for (i = 0; i < n; i++) pause();
+
 	while(wait(NULL) > 0);
-	printf("Terminando\n");
 	sem_close(sem);
 	munmap(cinfo, sizeof(ClientInfo));
 	return EXIT_SUCCESS;
