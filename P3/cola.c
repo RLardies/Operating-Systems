@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct {
+typedef struct _Queue{
 	char *queue;
 	int size;
 	int first;
