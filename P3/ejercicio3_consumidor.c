@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
 		sem_wait(sem);
 		sem_wait(sem_cola_llena);
 
-		c = cola_extraer(q);
+		cola_extraer(q,&c);
 
 		if(c == '\0'){
 			sem_unlink(SEM);
