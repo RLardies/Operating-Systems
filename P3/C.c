@@ -25,13 +25,15 @@ int main(int argc, char *argv[]) {
 	}
 	
 	mq_getattr(queue, &atr);
-	memset(buf, 0, 2048);
 	while(atr.mq_curmsgs > 0) {
+		memset(buf, 0, 2048);
+
 		if (mq_receive(queue, buf, 2048, &prior) < 0) {
 			perror("Error leyendo cola");
 			exit(EXIT_FAILURE);
 		}
 		printf("%s\n", buf);
+		mq_getattr(queue, &atr);
 	}
 
 	close(queue);

@@ -36,8 +36,6 @@ int main() {
 		exit(EXIT_FAILURE);
 	}
 
-	printf("Cosas creadas\n");
-
 	if ((pid = fork()) < 0) {
 		perror("Error en fork");
 		exit(EXIT_FAILURE);

@@ -7,6 +7,6 @@ int queue_init(Queue *qp, int size);
 int cola_llena(Queue *qp);
 int cola_vacia(Queue *qp);
 int cola_insertar(Queue *qp, char elem);
-char cola_extraer(Queue *qp);
+int cola_extraer(Queue *qp, char *ret);
 
 #endif
