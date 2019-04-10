@@ -17,7 +17,8 @@ int main(int argc, char *argv[]) {
 	mqd_t rqueue, wqueue;
 	struct mq_attr atr;
 	char buf[2048];
-	int i, prior;
+	int i; 
+	unsigned int prior;
 
 	if ((rqueue = mq_open(argv[1], O_RDONLY)) < 0) {
 		perror("Error al abrir la cola");
