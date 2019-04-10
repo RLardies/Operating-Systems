@@ -1,7 +1,7 @@
 ######################################################
 CC = gcc
 CFLAGS = -Wall
-EXE = ejercicio2 main A B C
+EXE = ejercicio2 main A B C ejercicio3_consumidor ejercicio3_productor
 LIB = -lrt -pthread
 #####################################################j
 
