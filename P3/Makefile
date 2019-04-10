@@ -1,14 +1,14 @@
 ######################################################
 CC = gcc
 CFLAGS = -Wall
-EXE = main A B C
-LIB = -lrt
-######################################################
+EXE = ejercicio2 main A B C
+LIB = -lrt -pthread
+#####################################################j
 
 all : $(EXE)
 
-$(EXE) : % : %.c
-	$(CC) $(CFLAGS) $@.c -o $@ $(LIB)
+$(EXE) : % : %.c cola.c
+	$(CC) $(CFLAGS) $@.c cola.c -o $@ $(LIB)
 
 clean:
 	rm -f core $(EXE)

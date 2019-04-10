@@ -22,15 +22,7 @@ typedef struct {
 } ClientInfo;
 
 
-ClientInfo *cinfo;
-sem_t *sem;
-
 void manejador_SIGUSR1(int sig) {
-	printf("Id antiguo: %d\n", cinfo->previous_id);
-	printf("Id actual: %d\n", cinfo->id);
-	printf("Nombre: %s\n", cinfo->name);
-	fflush(stdout);
-	sem_post(sem);
 }
 
 int main(int argc, char *argv[]) {
@@ -40,6 +32,10 @@ int main(int argc, char *argv[]) {
 	sigset_t mask;	
 	int fd, n = atoi(argv[1]), i;
 	char name[NAME_MAX];
+	ClientInfo *cinfo;
+	sem_t *sem;
+
+	if (argc < 1) return EXIT_FAILURE;
 
 	act.sa_handler = manejador_SIGUSR1;
 	act.sa_flags = 0;
@@ -75,8 +71,7 @@ int main(int argc, char *argv[]) {
 	}
 	sem_unlink(SEM);
 
-	sigemptyset(&mask);
-	sigaddset(&mask, SIGUSR1);
+	sigfillset(&mask);
 	sigprocmask(SIG_SETMASK, &mask, NULL);
 
 	for (i = 0; i < n; i++) {
@@ -104,9 +99,15 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	sigemptyset(&mask);
-	sigprocmask(SIG_SETMASK, &mask, NULL);
-	for (i = 0; i < n; i++) pause();
+	sigdelset(&mask, SIGUSR1);
+	for (i = 0; i < n; i++) {
+		sigsuspend(&mask);
+		printf("Id antiguo: %d\n", cinfo->previous_id);
+		printf("Id actual: %d\n", cinfo->id);
+		printf("Nombre: %s\n", cinfo->name);
+		fflush(stdout);
+		sem_post(sem);
+	}
 
 	while(wait(NULL) > 0);
 	sem_close(sem);

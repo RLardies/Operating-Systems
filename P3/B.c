@@ -31,8 +31,10 @@ int main(int argc, char *argv[]) {
 	}
 
 	mq_getattr(rqueue, &atr);
-	memset(buf, 0, 2048);
 	while(atr.mq_curmsgs > 0) {
+		mq_getattr(rqueue, &atr);
+		memset(buf, 0, 2048);
+
 		if (mq_receive(rqueue, buf, 2048, &prior) < 0) {
 			perror("Error leyendo cola");
 			exit(EXIT_FAILURE);
