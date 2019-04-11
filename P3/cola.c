@@ -2,20 +2,11 @@
 #include <stdlib.h>
 #include "cola.h"
 
-typedef struct _Queue{
-	char *queue;
-	int size;
-	int tail;
-	int head;
-} Queue;
 
-int queue_init(Queue *qp, int size) {
-	if ((qp->queue = (char *) malloc(size * sizeof(char))) == NULL)
-		return -1;
-	qp->size = size;
+int cola_init(Queue *qp) {
+	if (qp == NULL) return -1;
 	qp->tail = -1;
 	qp->head = 0;
-
 	return 0;
 }
 
@@ -31,20 +22,22 @@ int cola_vacia(Queue *qp) {
 }
 
 int cola_insertar(Queue *qp, char elem) {
-	if (cola_llena(qp) < 0) return -1;
+	if (cola_llena(qp) == 0) return -1;
 	if (cola_vacia(qp) == 0) {
 		qp->tail = 0;
 		qp->head = 0;
 	}
-	qp->queue[((qp->head)++)%qp->size] = elem;
+	printf("Insertamos\n");
+	qp->queue[qp->head] = elem;
+	qp->head = (qp->head + 1) % MAX_COLA;
 	return 0;
 }
 
 int cola_extraer(Queue *qp, char *ret) {
 	if (cola_vacia(qp) == 0) return -1;
 	*ret = qp->queue[qp->tail];
-	if ((qp->tail + 1)%qp->size == qp->head) qp->tail = -1;
-	else qp->tail = (qp->tail + 1)%(qp->size);
+	if ((qp->tail + 1)%MAX_COLA == qp->head) qp->tail = -1;
+	else qp->tail = (qp->tail + 1)%(MAX_COLA);
 
 	return 0;
 }

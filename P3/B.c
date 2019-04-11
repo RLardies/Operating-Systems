@@ -6,18 +6,19 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <string.h>
 #include <mqueue.h>
 
+#define SIZEBUF 10
 
 int main(int argc, char *argv[]) {
 
 	mqd_t rqueue, wqueue;
-	struct mq_attr atr;
-	char buf[2048];
-	int i; 
+	char buf[SIZEBUF];
+	int i, n, flag = 0;
 	unsigned int prior;
 
 	if ((rqueue = mq_open(argv[1], O_RDONLY)) < 0) {
@@ -30,26 +31,32 @@ int main(int argc, char *argv[]) {
 	   	exit(EXIT_FAILURE); 	
 	}
 
-	mq_getattr(rqueue, &atr);
-	while(atr.mq_curmsgs > 0) {
-		mq_getattr(rqueue, &atr);
-		memset(buf, 0, 2048);
-
-		if (mq_receive(rqueue, buf, 2048, &prior) < 0) {
-			perror("Error leyendo cola");
+	/*Vamos leyendo de una cola, transcribiéndolo y metiéndolo en la otra*/
+	while (flag == 0) {
+		if ((n = mq_receive(rqueue, buf, SIZEBUF, &prior)) < 0) {
+			perror("Error leyendo cola B");
 			exit(EXIT_FAILURE);
 		}
-		for (i = 0; buf[i] != 0 && i < 2048; i++) {
+		/*Solo si está entre la a y la z se suma 1*/
+		for (i = 0; buf[i] != 0 && i < SIZEBUF; i++) {
 			if (buf[i] == 'z')
 				buf[i] = 'a';
-			else
+			if (buf[i] >= 'a' && buf[i] < 'z')
 				buf[i]++;
 		}
-		if (mq_send(wqueue, buf, 2048, 1) < 0) {
-			perror("Error enviando a cola");
+		/*Si es el último envío se enviará solo lo necesario y se pondrá a 1 la flag que
+		 * indica el fin del bucle*/
+		if (n < SIZEBUF) {
+			if (mq_send(wqueue, buf, n, 1) < 0) {
+				perror("Error enviando a cola B");
+				exit(EXIT_FAILURE);
+			}
+			flag = 1;
+		}
+		else if (mq_send(wqueue, buf, SIZEBUF, 1) < 0) {
+			perror("Error enviando a cola B");
 			exit(EXIT_FAILURE);
 		}
-		memset(buf, 0, 2048);
 	}
 
 	close(rqueue);

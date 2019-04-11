@@ -11,29 +11,37 @@
 #include <string.h>
 #include <mqueue.h>
 
+#define SIZEBUF 10
 
 int main(int argc, char *argv[]) {
 
 	mqd_t queue;
-	struct mq_attr atr;
-	char buf[2048];
+	char buf[SIZEBUF];
 	unsigned int prior;
+	int flag = 0, n;
 	
+	/*Abrimos la cola de la que vamos a recibir la informacion*/
 	if ((queue = mq_open(argv[1], O_RDONLY)) < 0) {
 		perror("Error al abrir la cola");
 		exit(EXIT_FAILURE); 	
 	}
 	
-	mq_getattr(queue, &atr);
-	while(atr.mq_curmsgs > 0) {
-		memset(buf, 0, 2048);
-
-		if (mq_receive(queue, buf, 2048, &prior) < 0) {
-			perror("Error leyendo cola");
+	/*Iniciamos el bucle que va a leer e imprimir la informacion*/
+	while(flag == 0) {
+		if ((n = mq_receive(queue, buf, SIZEBUF, &prior)) < 0) {
+			perror("Error leyendo cola C");
 			exit(EXIT_FAILURE);
 		}
-		printf("%s\n", buf);
-		mq_getattr(queue, &atr);
+		/*Cuando le llegue la última cadena pone la flag que controla el bucle a 1*/
+		if (n < SIZEBUF) {
+			flag = 1;
+			/*Si la última cadena solo es un -1, significa que el tamaño del archivo era
+			 * multiplo del tamaño del bufer, y este no lo tiene que imprimir*/
+			if (n == 1 && buf[0] == -1)
+				break;
+		}
+		/*Imprimimos la información por pantalla*/
+		write(1, buf, n);
 	}
 
 	close(queue);

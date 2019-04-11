@@ -25,36 +25,36 @@ int main(int argc, char *argv[]) {
 	sem_t *sem_cola_llena;
 	sem_t *sem_cola_vacia;
 
-	if ((fd = shm_open(FILE, O_RDWR , S_IRUSR | S_IWUSR)) < 0) {
+	if ((fd = open(FILE, O_RDWR , S_IRUSR | S_IWUSR)) < 0) {
 		perror("Error en shm_open");
 		exit(EXIT_FAILURE);
 	}
+	shm_unlink(FILE);
 	
 	if ((q = (Queue *) mmap(NULL, sizeof(q), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == MAP_FAILED) {
 		perror("Error en mmap");
 		close(fd);
 		exit(EXIT_FAILURE);
 	}
-	close(fd);
 
     if ((sem = sem_open(SEM, O_CREAT)) == SEM_FAILED) {
         printf("Error abriendo semaforo\n");
-		shm_unlink(FILE);
+		close(fd);
         exit(EXIT_FAILURE);
     }
 
     if ((sem_cola_vacia = sem_open(SEM_COLA_VACIA, 0)) == SEM_FAILED) {
         printf("Error abriendo semaforo\n");
-		shm_unlink(FILE);
-		sem_unlink(SEM);
+		close(fd);
+		close(sem);
         exit(EXIT_FAILURE);
     }
 
     if ((sem_cola_llena = sem_open(SEM_COLA_LLENA, 0)) == SEM_FAILED) {
         printf("Error abriendo semaforo\n");
-		shm_unlink(FILE);
-		sem_unlink(SEM);
-		sem_unlink(SEM_COLA_VACIA);
+		close(fd);
+		close(sem);
+		close(sem_cola_vacia);
         exit(EXIT_FAILURE);
     }
 
@@ -62,16 +62,15 @@ int main(int argc, char *argv[]) {
 		sem_wait(sem_cola_vacia);
 		sem_wait(sem);
 		if (cola_extraer(q, &c) < 0) {
-			perror("Error extrayendo de la cola\n");	
-			sem_close(sem);
-			sem_close(sem_cola_vacia);
-			sem_close(sem_cola_llena);
-			exit(EXIT_FAILURE);
+			
 		}
 
 		if (c == '\0') {
+			sem_post(sem_cola_llena);
 			sem_post(sem);
 			munmap(q,sizeof(Queue*));
+			shm_unlink(FILE);
+
 			sem_close(sem);
 			sem_close(sem_cola_vacia);
 			sem_close(sem_cola_llena);

@@ -14,18 +14,21 @@
 #define QUEUE1 "/queue1"
 #define QUEUE2 "/queue2"
 #define FILE "prueba.txt"
+#define SIZEBUF 10
 
 int main() {
 	
+	/*Inicializamos los atributos de las colas*/
 	struct mq_attr atr = {
 		.mq_flags = 0,
-		.mq_maxmsg = 10,
-		.mq_msgsize = 2048,
+		.mq_maxmsg = SIZEBUF,
+		.mq_msgsize = SIZEBUF,
 		.mq_curmsgs = 0
 	};
 	pid_t pid;
 	mqd_t q1, q2;
 
+	/*Abrimos las colas*/
 	if ((q1 = mq_open(QUEUE1, O_CREAT | O_EXCL | O_RDWR, S_IWUSR | S_IRUSR, &atr)) < 0) {
 		perror("Error abriendo cola 1");
 		exit(EXIT_FAILURE);
@@ -36,12 +39,13 @@ int main() {
 		exit(EXIT_FAILURE);
 	}
 
+	/*Creamos los hijos con cada programa*/
 	if ((pid = fork()) < 0) {
 		perror("Error en fork");
 		exit(EXIT_FAILURE);
 	}
 	if (pid == 0) {
-		execl("./A", "A", FILE, QUEUE1, (char *) NULL);
+		execl("A", "A", FILE, QUEUE1, (char *) NULL);
 		perror("Error en exec");
 		exit(EXIT_FAILURE);
 	}
@@ -51,7 +55,7 @@ int main() {
 		exit(EXIT_FAILURE);
 	}
 	if (pid == 0) {
-		execl("./B", "B", QUEUE1, QUEUE2, (char *) NULL);
+		execl("B", "B", QUEUE1, QUEUE2, (char *) NULL);
 		perror("Error en exec");
 		exit(EXIT_FAILURE);
 	}
@@ -61,11 +65,12 @@ int main() {
 		exit(EXIT_FAILURE);
 	}
 	if (pid == 0) {
-		execl("./C", "C", QUEUE2, (char *) NULL);
+		execl("C", "C", QUEUE2, (char *) NULL);
 		perror("Error en exec");
 		exit(EXIT_FAILURE);
 	}
 
+	/*Esperamos a que acaben todos los hijos*/
 	while(wait(NULL) > 0);
 
 	mq_unlink(QUEUE1);

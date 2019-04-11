@@ -1,15 +1,20 @@
 ######################################################
 CC = gcc
 CFLAGS = -Wall
-EXE = ejercicio2 main A B C ejercicio3_consumidor ejercicio3_productor
+EXE = ejercicio2 main A B C 
+EXECOLA = ejercicio3_consumidor ejercicio3_productor
+EXEALL = $(EXE) $(EXECOLA)
 LIB = -lrt -pthread
-#####################################################j
+######################################################
 
-all : $(EXE)
+all : $(EXEALL)
 
-$(EXE) : % : %.c cola.c
+$(EXECOLA) : % : %.c cola.c
 	$(CC) $(CFLAGS) $@.c cola.c -o $@ $(LIB)
 
+$(EXE) : % : %.c
+	$(CC) $(CFLAGS) $@.c -o $@ $(LIB)
+
 clean:
-	rm -f core $(EXE)
+	rm -f core $(EXEALL)
 
