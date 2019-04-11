@@ -21,8 +21,21 @@ typedef struct {
 	char name[NAME_MAX]; //!< Name of the client.
 } ClientInfo;
 
+sem_t *sem;
+int cont = 0;
+ClientInfo *cinfo;
 
 void manejador_SIGUSR1(int sig) {
+	/*Imprimimos la información por pantalla protegiéndola con un semáforo*/
+	sem_wait(sem);
+	printf("Id antiguo: %d\n", cinfo->previous_id);
+	printf("Id actual: %d\n", cinfo->id);
+	printf("Nombre: %s\n", cinfo->name);
+	fflush(stdout);
+	/*Permitimos que siga el siguiente hijo*/
+	sem_post(sem);
+	/*Contamos cuantos procesos han enviado la señal*/
+	cont++;
 }
 
 int main(int argc, char *argv[]) {
@@ -31,8 +44,6 @@ int main(int argc, char *argv[]) {
 	pid_t pid;
 	sigset_t mask;	
 	int fd, n = atoi(argv[1]), i;
-	ClientInfo *cinfo;
-	sem_t *sem;
 
 	if (argc < 1) return EXIT_FAILURE;
 
@@ -98,6 +109,7 @@ int main(int argc, char *argv[]) {
 			printf("Introduzca un nombre: ");
 			scanf("%s", cinfo->name);
 			cinfo->id++;
+			sem_post(sem);
 
 			/*Indicamos al padre que ya hemos terminado y liberamos recursos*/
 			kill(getppid(), SIGUSR1);
@@ -112,16 +124,10 @@ int main(int argc, char *argv[]) {
 	for (i = 0; i < n; i++) {
 		/*Esperamos a que termine alguno de los hijos*/
 		sigsuspend(&mask);
-		/*Imprimimos la información por pantalla*/
-		printf("Id antiguo: %d\n", cinfo->previous_id);
-		printf("Id actual: %d\n", cinfo->id);
-		printf("Nombre: %s\n", cinfo->name);
-		fflush(stdout);
-		/*Permitimos que siga el siguiente hijo*/
-		sem_post(sem);
 	}
 
 	/*Esperamos a que terminen todos los hijos*/
+	while(cont < n);
 	while(wait(NULL) > 0);
 	sem_close(sem);
 	munmap(cinfo, sizeof(ClientInfo));

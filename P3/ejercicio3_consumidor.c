@@ -63,7 +63,6 @@ int main(int argc, char *argv[]) {
 	while (1) {
 		sem_wait(sem_cola_vacia);
 		sem_wait(sem);
-<<<<<<< HEAD
 		if (cola_extraer(q, &c) < 0) {
 			perror("Error extrayendo de la cola\n");	
 			sem_close(sem);
@@ -71,16 +70,6 @@ int main(int argc, char *argv[]) {
 			sem_close(sem_cola_llena);
 			exit(EXIT_FAILURE);
 		}
-=======
-		sem_wait(sem_cola_llena);
-
-		cola_extraer(q,&c);
-
-		if(c == '\0'){
-			sem_unlink(SEM);
-			sem_unlink(SEM_COLA_VACIA);
-			sem_unlink(SEM_COLA_LLENA);
->>>>>>> 08452fcca45a95b69e0057136a03aff8040b5618
 
 		if (c == '\0') {
 			sem_post(sem);
