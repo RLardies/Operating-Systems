@@ -1,7 +1,7 @@
 ######################################################
 CFLAGS = -Wall
-EXE = ejercicio2 ejercicio2_solved main A B C 
-EXECOLA = ejercicio3_consumidor ejercicio3_productor
+EXE = ejercicio2 ejercicio2_solved ejercicio4 A B C 
+EXECOLA = ejercicio3_consumidor ejercicio3_productor ejercicio3_consumidor_fichero ejercicio3_productor_fichero
 EXEALL = $(EXE) $(EXECOLA)
 LIB = -lrt -pthread
 ######################################################

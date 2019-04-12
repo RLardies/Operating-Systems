@@ -15,7 +15,7 @@
 #define SEM "/sem"
 #define SEM_COLA_LLENA "/sem_cola_llena"
 #define SEM_COLA_VACIA "/sem_cola_vacia"
-#define FILE "/mi_fichero"
+#define FILE "mi_fichero"
 #define MAX_COLA 10
 
 int main(int argc, char *argv[]) {
@@ -28,12 +28,12 @@ int main(int argc, char *argv[]) {
 	sem_t *sem_cola_vacia;
 
 	/*Abrimos la región de memoria compartida ya creada*/
-	if ((fd = shm_open(FILE, O_RDWR , S_IRUSR | S_IWUSR)) < 0) {
+	if ((fd = open(FILE, O_RDWR , S_IRUSR | S_IWUSR)) < 0) {
 		perror("Error en shm_open");
 		exit(EXIT_FAILURE);
 	}
 	
-	if ((q = (Queue *) mmap(NULL, sizeof(q), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == MAP_FAILED) {
+	if ((q = (Queue *) mmap(NULL, sizeof(Queue), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == MAP_FAILED) {
 		perror("Error en mmap");
 		close(fd);
 		exit(EXIT_FAILURE);

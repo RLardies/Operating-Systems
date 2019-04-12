@@ -13,7 +13,7 @@
 #define SEM "/sem"
 #define SEM_COLA_LLENA "/sem_cola_llena"
 #define SEM_COLA_VACIA "/sem_cola_vacia"
-#define FILE "/mi_fichero"
+#define FILE "mi_fichero"
 #define MAX_COLA 10
 
 int main(int argc, char *argv[]) {
@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
 	sem_t *sem_cola_llena;
 
 	/*Creamos los semáforos que vamos a utilizar*/
-	if ((sem = sem_open(SEM, O_RDWR | O_CREAT | O_EXCL, 
+	if ((sem = sem_open(SEM, O_RDWR | O_CREAT | O_EXCL,
 			S_IRUSR | S_IWUSR, 1)) == SEM_FAILED) {
 		perror("Error en sem_open");
 		exit(EXIT_FAILURE);
@@ -45,8 +45,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	/*Creamos el FICHERO en el que vamos a almacenar la cola*/
-	if ((fd = shm_open(FILE, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR)) < 0) {
-		perror("Error en shm_open");
+	if ((fd = open(FILE, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR)) < 0) {
+		perror("Error en open");
 		exit(EXIT_FAILURE);
 	}
 
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	/*Liberamos los recursos y finalizamos el programa*/
-	shm_unlink(FILE);
+	unlink(FILE);
 	sem_unlink(SEM);
 	sem_unlink(SEM_COLA_VACIA);
 	sem_unlink(SEM_COLA_LLENA);

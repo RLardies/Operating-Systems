@@ -14,14 +14,14 @@
 #define QUEUE1 "/queue1"
 #define QUEUE2 "/queue2"
 #define FILE "prueba.txt"
-#define SIZEBUF 10
+#define SIZEBUF 2048
 
 int main() {
 	
 	/*Inicializamos los atributos de las colas*/
 	struct mq_attr atr = {
 		.mq_flags = 0,
-		.mq_maxmsg = SIZEBUF,
+		.mq_maxmsg = 10,
 		.mq_msgsize = SIZEBUF,
 		.mq_curmsgs = 0
 	};

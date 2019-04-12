@@ -11,7 +11,7 @@
 #include <string.h>
 #include <mqueue.h>
 
-#define SIZEBUF 10
+#define SIZEBUF 2048
 
 int main(int argc, char *argv[]) {
 	

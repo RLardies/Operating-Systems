@@ -1,0 +1,52 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{vmargin}
+\usepackage{array}
+\usepackage{listings}
+\usepackage{color}
+
+
+\newcommand{\image}[2]{\begin{center}
+\includegraphics[height=#1mm]{#2}
+\end{center}}
+\newcommand{\sub}[1]{$_{\text{#1}}$}
+
+
+\setlength\parindent{0pt}
+\setmargins{2.5cm}       % margen izquierdo
+{1.5cm}                        % margen superior
+{16cm}                      % anchura del texto
+{23.42cm}                    % altura del texto
+{10pt}                           % altura de los encabezados
+{1cm}                           % espacio entre el texto y los encabezados
+{0pt}                             % altura del pie de página
+{2cm}
+
+\begin{document}
+
+\title{Memoria practica 3 SOPER}
+\author{Carlos Gómez-Lobo}
+
+\begin{center}
+\vspace{5mm}
+
+\textbf{\Huge Memoria práctica 3}
+\vspace{5mm}
+
+{\Large Carlos Gómez-Lobo Hernaiz, Rodrigo Lardiés Guillén}
+
+\end{center}
+\vspace{5mm}
+
+\textbf{Ejercicio 2.} Si solo usamos el sémaforo para proteger la zona crítica, que es cuando se lee y se escribe en la región de memoria compartida; dependiendo del tiempo que espere cada hijo y del que se tome el usuario para introducir los nombres, el padre no imprimirá la información de todos sino que podría imprimir información repetida. Esto se debe a que algunos procesos hijos hacen down antes de que se introduzca un nombre, lo que provoca, por ser los semáforos de linux robustos, que se solicite el siguiente nombre antes de que se imprima la información del anterior y esta se imprima después por ejemplo la información actualizada dos veces.
+\vspace{3mm}
+
+Una forma de arreglar esto podría ser, en vez de hacer up del semáforo cuando el hijo acabe de escribir en la estructura, esperar a que el padre lea la información y que haga él el up. De esta forma aseguramos que el padre imprime la información antes de que el siguiente hijo la modifique. Además se han hecho algunos cambios para eliminar la necesiad de utilizar vaiables globales.
+\vspace{5mm}
+
+\textbf{Ejercicio 4.} De este ejercicio lo único que hay que comentar es que para identificar cuando se acaba de enviar mensajes se utiliza la longitud del mensaje enviado, si ésta es menor que 2048, significa que es el último. Esto es así excepto en el caso en el que la longitud del fichero es múltiplo de 2048, en ese caso como último mensaje se manda uno que consiste únicamente en un caracter on valor -1, y que no será imprimido por el proceso C.
+
+\end{document}

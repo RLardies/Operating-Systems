@@ -27,7 +27,6 @@ int cola_insertar(Queue *qp, char elem) {
 		qp->tail = 0;
 		qp->head = 0;
 	}
-	printf("Insertamos\n");
 	qp->queue[qp->head] = elem;
 	qp->head = (qp->head + 1) % MAX_COLA;
 	return 0;

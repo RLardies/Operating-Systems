@@ -11,14 +11,15 @@
 #include <string.h>
 #include <mqueue.h>
 
-#define SIZEBUF 10
+#define SIZEBUF 2048
 
 int main(int argc, char *argv[]) {
 
 	mqd_t queue;
 	char buf[SIZEBUF];
 	unsigned int prior;
-	int flag = 0, n;
+	int flag = 0;
+	ssize_t n;
 	
 	/*Abrimos la cola de la que vamos a recibir la informacion*/
 	if ((queue = mq_open(argv[1], O_RDONLY)) < 0) {

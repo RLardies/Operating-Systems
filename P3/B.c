@@ -12,15 +12,17 @@
 #include <string.h>
 #include <mqueue.h>
 
-#define SIZEBUF 10
+#define SIZEBUF 2048
 
 int main(int argc, char *argv[]) {
 
 	mqd_t rqueue, wqueue;
 	char buf[SIZEBUF];
-	int i, n, flag = 0;
+	int i, flag = 0;
+	ssize_t n;
 	unsigned int prior;
 
+	/*Abrimos las colas que vamos a utilizar para que se comuniquen los procesos*/
 	if ((rqueue = mq_open(argv[1], O_RDONLY)) < 0) {
 		perror("Error al abrir la cola");
 	   	exit(EXIT_FAILURE); 	
