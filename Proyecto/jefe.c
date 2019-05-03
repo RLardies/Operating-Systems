@@ -14,17 +14,21 @@
 
 #include "mapa.h"
 
-void manejador_SIGTERM(int sig) {
+int sim, i, j;
+int pipes[N_NAVES][2];
 
+void manejador_SIGTERM(int sig) {
+	while (wait(NULL) > 0);
+	for (int i = 0; i < N_NAVES; i++) close(pipes[i][1]);
+	close(sim);
 }
 
 int main(int argc, char *argv[]) {
 
-	int sim, i, j;
-	int pipes[N_NAVES][2];
 	struct sigaction act;
 	pid_t pid;
 	char buf[100];
+	int id;
 
 	act.sa_handler = manejador_SIGTERM;
 	act.sa_flags = 0;
@@ -33,6 +37,8 @@ int main(int argc, char *argv[]) {
 		perror("Error en sigaction jefe");
 		kill(0, SIGTERM);
 	}
+	sim = atoi(argv[1]);
+	id = atoi(argv[2]);
 
 	for (i = 0; i < N_NAVES; i++) {
 		if (pipe(pipes[i]) < 0) {
