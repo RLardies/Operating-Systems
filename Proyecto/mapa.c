@@ -14,6 +14,16 @@ int mapa_clean_casilla(tipo_mapa *mapa, int posy, int posx)
 	return 0;
 }
 
+void mapa_clean(tipo_mapa *mapa) {
+	int i, j;
+
+	for (i = 0; i < MAPA_MAXX; i++) {
+		for (j = 0; j < MAPA_MAXY; j++) {
+			mapa_clean_casilla(mapa, j, i);
+		}
+	}
+}
+
 tipo_casilla mapa_get_casilla(tipo_mapa *mapa, int posy, int posx)
 {
 	return mapa->casillas[posy][posx];

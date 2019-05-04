@@ -17,5 +17,13 @@
 
 int main (int argc, char *argv[]) {
 
+	int pipejefe = atoi(argv[1]);
+	mqd_t cola;
+
+	if ((cola = mq_open(QUEUE_NAME, O_WRONLY)) < 0) {
+		perror("Error abriendo cola nave");
+		kill(0, SIGTERM);
+	}	
+
 	return EXIT_SUCCESS;
 }

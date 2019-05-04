@@ -37,13 +37,67 @@ void manejador_SIGTERM(int sig) {
 	exit(EXIT_SUCCESS);
 }
 
+int randint(int first, int last) {
+	return rand() * (last - first) / RAND_MAX + first;
+}
+
+void distribuir_naves(tipo_mapa *mapa) {
+	int i, j, x, y;
+	tipo_nave auxnave = {
+		.vida = VIDA_MAX,
+		.viva = true
+	};
+
+	mapa_clean(mapa);
+
+	for (i = 0; i < N_EQUIPOS; i++) {
+		for (j = 0; j < N_NAVES; j++) {
+			auxnave.equipo = i;
+			auxnave.numNave = j;
+			while (mapa_is_casilla_vacia(mapa, (y = randint(0, MAPA_MAXY)), (x = randint(0, MAPA_MAXX))) == false);
+			auxnave.posx = x;
+			auxnave.posy = y;
+			mapa_set_nave(mapa, auxnave);
+		}
+	}
+}
+
+void crear_jefes(int pipes[N_EQUIPOS][2]) {
+
+	int i, j;
+	pid_t pid;
+	char buf[100];
+
+	for (i = 0; i < N_EQUIPOS; i++) {
+		if (pipe(pipes[i]) < 0) {
+			perror("Error creando pipes");
+			kill(0, SIGTERM);
+		}
+		if ((pid = fork()) < 0) {
+			perror("Error creando jefe");
+			kill(0, SIGTERM);
+		}
+		if (pid == 0) {
+			for (j = 0; j < i; j++) {
+				close(pipes[j][0]);
+				close(pipes[j][1]);
+			}
+			close(pipes[i][1]);
+			sprintf(buf, "%d", pipes[i][0]);
+			execl("jefe", "jefe", buf, (char *) NULL);
+			perror("Error en exec");
+			kill(0, SIGTERM);
+		}	
+		close(pipes[i][0]);
+	}
+}
+
 int main() {
 
 	int ret=0, i, j;
 	int pipes[N_EQUIPOS][2];
+	tipo_mapa *mapa;
 	struct sigaction act;
-	pid_t pid;
-	char buf[100];
 	struct mq_attr qattr = {
 		.mq_flags = 0,
 		.mq_maxmsg = 10,
@@ -70,7 +124,7 @@ int main() {
 		perror("Error en ftruncate");
 		kill(0, SIGTERM);
 	}
-	if ((mapa = mmap(NULL, sizeof(tipo_mapa), PROT_READ | PROT_WRITE, MAP_SHARED, shmfd, 0)) == MAP_FAILED) {
+	if ((mapa = (tipo_mapa *) mmap(NULL, sizeof(tipo_mapa), PROT_READ | PROT_WRITE, MAP_SHARED, shmfd, 0)) == MAP_FAILED) {
 		perror("Error en mmap");
 		kill(0, SIGTERM);
 	}
@@ -79,31 +133,10 @@ int main() {
 		kill(0, SIGTERM);
 	}
 
-	for (i = 0; i < N_EQUIPOS; i++) {
-		if (pipe(pipes[i]) < 0) {
-			perror("Error creando pipes");
-			kill(0, SIGTERM);
-		}
-		if ((pid = fork()) < 0) {
-			perror("Error creando jefe");
-			kill(0, SIGTERM);
-		}
-		if (pid == 0) {
-			for (j = 0; j < i; j++) {
-				close(pipes[j][0]);
-				close(pipes[j][1]);
-			}
-			close(pipes[i][1]);
-			itoa(pipes[i][0], buf, 10);
-			execl("jefe", "jefe", buf, (char *) NULL);
-			perror("Error en exec");
-			kill(0, SIGTERM);
-		}	
-		close(pipes[i][0]);
-	}
+	crear_jefes(pipes);
+	distribuir_naves(mapa);		
+
+
 	
     exit(ret);
 }
-
-
-

@@ -23,22 +23,10 @@ void manejador_SIGTERM(int sig) {
 	close(sim);
 }
 
-int main(int argc, char *argv[]) {
+void crear_naves(int pipes[N_NAVES][2]) {
 
-	struct sigaction act;
 	pid_t pid;
 	char buf[100];
-	int id;
-
-	act.sa_handler = manejador_SIGTERM;
-	act.sa_flags = 0;
-	sigemptyset(&act.sa_mask);
-	if (sigaction(SIGTERM, &act, NULL) < 0) {
-		perror("Error en sigaction jefe");
-		kill(0, SIGTERM);
-	}
-	sim = atoi(argv[1]);
-	id = atoi(argv[2]);
 
 	for (i = 0; i < N_NAVES; i++) {
 		if (pipe(pipes[i]) < 0) {
@@ -55,13 +43,28 @@ int main(int argc, char *argv[]) {
 				close(pipes[j][1]);
 			}
 			close(pipes[i][1]);
-			itoa(pipes[i][0], buf, 10);
+			sprintf(buf, "%d", pipes[i][0]);
 			execl("nave", "nave", buf, (char *) NULL);
 			perror("Error en exec");
 			kill(0, SIGTERM);
 		}	
 		close(pipes[i][0]);
 	}
+}
+
+int main(int argc, char *argv[]) {
+
+	struct sigaction act;
+	int simpipe;
+
+	act.sa_handler = manejador_SIGTERM;
+	act.sa_flags = 0;
+	sigemptyset(&act.sa_mask);
+	if (sigaction(SIGTERM, &act, NULL) < 0) {
+		perror("Error en sigaction jefe");
+		kill(0, SIGTERM);
+	}
+	simpipe = atoi(argv[1]);
 
 	return EXIT_SUCCESS;
 }

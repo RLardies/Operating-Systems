@@ -7,6 +7,9 @@
 // Pone una casilla del mapa a vacío
 int mapa_clean_casilla(tipo_mapa *mapa, int posy, int posx);
 
+//Pone todas las casillas del mapa a vacío
+void mapa_clean(tipo_mapa *mapa);
+
 // Obtiene información de una casilla del mapa
 tipo_casilla mapa_get_casilla(tipo_mapa *mapa, int posy, int posx);
 
