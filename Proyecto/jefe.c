@@ -14,19 +14,21 @@
 
 #include "mapa.h"
 
-int sim, i, j;
+int simpipe, id;
 int pipes[N_NAVES][2];
 
 void manejador_SIGTERM(int sig) {
 	while (wait(NULL) > 0);
 	for (int i = 0; i < N_NAVES; i++) close(pipes[i][1]);
-	close(sim);
+	close(simpipe);
+	exit(EXIT_SUCCESS);
 }
 
 void crear_naves(int pipes[N_NAVES][2]) {
 
 	pid_t pid;
 	char buf[100];
+	int i, j; 
 
 	for (i = 0; i < N_NAVES; i++) {
 		if (pipe(pipes[i]) < 0) {
@@ -43,7 +45,7 @@ void crear_naves(int pipes[N_NAVES][2]) {
 				close(pipes[j][1]);
 			}
 			close(pipes[i][1]);
-			sprintf(buf, "%d", pipes[i][0]);
+			sprintf(buf, "%d %d %d", pipes[i][0], i, id);
 			execl("nave", "nave", buf, (char *) NULL);
 			perror("Error en exec");
 			kill(0, SIGTERM);
@@ -55,7 +57,8 @@ void crear_naves(int pipes[N_NAVES][2]) {
 int main(int argc, char *argv[]) {
 
 	struct sigaction act;
-	int simpipe;
+
+	sscanf(argv[1], "%d %d", &simpipe, &id);
 
 	act.sa_handler = manejador_SIGTERM;
 	act.sa_flags = 0;
@@ -64,7 +67,6 @@ int main(int argc, char *argv[]) {
 		perror("Error en sigaction jefe");
 		kill(0, SIGTERM);
 	}
-	simpipe = atoi(argv[1]);
 
 	return EXIT_SUCCESS;
 }

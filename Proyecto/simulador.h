@@ -22,6 +22,9 @@ extern char symbol_equipos[N_EQUIPOS]; // Símbolos de los diferentes equipos en
 #define ATAQUE_DANO 10 // Daño de un ataque
 #define MOVER_ALCANCE 1 // Máximo de casillas a mover
 #define TURNO_SECS 5 // Segundos que dura un turno
+#define ATACAR "ATACAR" //Mensaje para indicar ataque
+#define MOVER_ALEATORIO "MOVER_ALEATORIO" //Mensaje para moverse aleatoriamente
+#define DESTRUIR "DESTRUIR" //Mensaje para destruir nave
 
 
 /*** MAPA ***/

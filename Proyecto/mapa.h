@@ -4,6 +4,9 @@
 #include <simulador.h>
 #include <stdbool.h>
 
+//Genera un número aleatorio entre first y last
+int randint(int first, int last);
+
 // Pone una casilla del mapa a vacío
 int mapa_clean_casilla(tipo_mapa *mapa, int posy, int posx);
 

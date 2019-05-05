@@ -6,6 +6,10 @@
 
 char symbol_equipos[N_EQUIPOS] ={'A','B','C'};
 
+int randint(int first, int last) {
+	return rand() * (last - first) / (RAND_MAX + 1.0) + first;
+}
+
 int mapa_clean_casilla(tipo_mapa *mapa, int posy, int posx)
 {
 	mapa->casillas[posy][posx].equipo=-1;

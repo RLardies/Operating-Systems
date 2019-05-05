@@ -37,10 +37,6 @@ void manejador_SIGTERM(int sig) {
 	exit(EXIT_SUCCESS);
 }
 
-int randint(int first, int last) {
-	return rand() * (last - first) / RAND_MAX + first;
-}
-
 void distribuir_naves(tipo_mapa *mapa) {
 	int i, j, x, y;
 	tipo_nave auxnave = {
@@ -69,6 +65,7 @@ void crear_jefes(int pipes[N_EQUIPOS][2]) {
 	char buf[100];
 
 	for (i = 0; i < N_EQUIPOS; i++) {
+		mapa_set_num_naves(mapa, i, N_NAVES);
 		if (pipe(pipes[i]) < 0) {
 			perror("Error creando pipes");
 			kill(0, SIGTERM);
@@ -83,7 +80,7 @@ void crear_jefes(int pipes[N_EQUIPOS][2]) {
 				close(pipes[j][1]);
 			}
 			close(pipes[i][1]);
-			sprintf(buf, "%d", pipes[i][0]);
+			sprintf(buf, "%d %d", pipes[i][0], i);
 			execl("jefe", "jefe", buf, (char *) NULL);
 			perror("Error en exec");
 			kill(0, SIGTERM);
@@ -97,6 +94,7 @@ int main() {
 	int ret=0, i, j;
 	int pipes[N_EQUIPOS][2];
 	tipo_mapa *mapa;
+	char buf[100];
 	struct sigaction act;
 	struct mq_attr qattr = {
 		.mq_flags = 0,
@@ -136,7 +134,16 @@ int main() {
 	crear_jefes(pipes);
 	distribuir_naves(mapa);		
 
-
+	for (i = 0; i < N_NAVES * N_EQUIPOS; i++) {
+		if (mq_receive(cola, buf, MAXMSGSIZE, NULL) < 0) {
+			perror("Error recibiendo mensaje inicial");
+			kill(0, SIGTERM);
+		}
+		if (strcmp(buf, "READY")) {
+			perror("Error con mensaje de inicio");
+			kill(0, SIGTERM);
+		}
+	}
 	
     exit(ret);
 }
