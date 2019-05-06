@@ -22,9 +22,11 @@ extern char symbol_equipos[N_EQUIPOS]; // Símbolos de los diferentes equipos en
 #define ATAQUE_DANO 10 // Daño de un ataque
 #define MOVER_ALCANCE 1 // Máximo de casillas a mover
 #define TURNO_SECS 5 // Segundos que dura un turno
-#define ATACAR "ATACAR" //Mensaje para indicar ataque
-#define MOVER_ALEATORIO "MOVER_ALEATORIO" //Mensaje para moverse aleatoriamente
-#define DESTRUIR "DESTRUIR" //Mensaje para destruir nave
+#define ATACAR "ATACAR" // Mensaje para indicar ataque
+#define MOVER_ALEATORIO "MOVER_ALEATORIO" // Mensaje para moverse aleatoriamente
+#define DESTRUIR "DESTRUIR" // Mensaje para destruir nave
+#define TURNO "TURNO" // Mensaje para ceder turno a un equipo
+#define FIN "FIN" // Mensaje para indicar el fin de la partida
 
 
 /*** MAPA ***/
@@ -55,7 +57,7 @@ typedef struct {
 #define SHM_MAP_NAME "/shm_naves"
 #define QUEUE_NAME "/cola"
 #define SEM_INICIO "/sem_inicio"
-#define MAXMSGSIZE 30
+#define MAXMSGSIZE 100
 
 /*** Auxiliares ***/
 

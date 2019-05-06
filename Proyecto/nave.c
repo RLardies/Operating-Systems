@@ -16,12 +16,14 @@
 
 int pipejefe, shmfd = -1, idjefe, id;
 mqd_t cola = -1;
-tipo_mapa *mapa;
+tipo_mapa *mapa = NULL;
+sem_t *sem_ini = NULL;
 
 void manejador_SIGACTION(int sig) {
 	close(pipejefe);
 	if (cola != -1) mq_close(cola);
 	if (mapa == NULL) munmap(mapa, sizeof(tipo_mapa));
+	if (sem_ini != NULL) sem_close(sem_ini);
 	exit(EXIT_SUCCESS);
 }
 
@@ -80,6 +82,7 @@ void mover_nave() {
 
 void destruir_nave() {
 	mapa->info_naves[idjefe][id].viva = false;
+	mapa->num_naves[idjefe]--;
 	raise(SIGTERM);
 }
 
@@ -109,11 +112,18 @@ int main (int argc, char *argv[]) {
 		perror("Error en mmap nave");
 		kill(0, SIGTERM);
 	}
+	if ((sem_ini = sem_open(SEM_INICIO, O_RDWR)) == SEM_FAILED) {
+		perror("Error abriendo semáforo nave");
+		kill(0, SIGTERM);
+	}
 
 	if (mq_send(cola, "READY", sizeof("READY"), 1) < 0) {
 		perror("Error enviando mensaje nave");
 		kill(0, SIGTERM);
 	}
+
+	sem_wait(sem_ini);
+	sem_post(sem_ini);
 
 	while(1) {
 		if (read(pipejefe, buf, MAXMSGSIZE) < 0) {
