@@ -17,7 +17,7 @@
 int pipejefe, shmfd = -1, idjefe, id;
 mqd_t cola = -1;
 tipo_mapa *mapa = NULL;
-sem_t *sem_ini = NULL;
+sem_t *sem_ini = NULL, *mutex = NULL, *sem_pantalla = NULL;
 
 void manejador_SIGUSR1(int sig) {
 	close(pipejefe);
@@ -36,9 +36,11 @@ void buscar_nave(tipo_mapa *mapa, int coord[2]) {
 	int i, x = coord[1], y = coord[0];
 	
 	for (i = 0; i < ATAQUE_ALCANCE * ATAQUE_ALCANCE / 5; i++) {
+		sem_wait(mutex);
 		while (mapa_get_distancia(mapa, coord[0] = randint(0, MAPA_MAXY), coord[1] = randint(0, MAPA_MAXX), y, x) > ATAQUE_ALCANCE 
 				|| mapa_get_casilla(mapa, coord[0], coord[1]).equipo == idjefe);
 		if (!mapa_is_casilla_vacia(mapa, y, x)) return;
+		sem_post(mutex);
 	}
 }
 /*
@@ -48,10 +50,12 @@ void atacar_nave() {
 	int coord[2];
 	char buf[MAXMSGSIZE];
 	
+	sem_wait(mutex);
 	coord[0] = mapa->info_naves[idjefe][id].posy;
 	coord[1] = mapa->info_naves[idjefe][id].posx;
+	sem_post(mutex);
 	buscar_nave(mapa, coord);
-	sprintf(buf, "ATACAR %d, %d", coord[0], coord[1]);
+	sprintf(buf, "ATACAR %d %d -1 -1", coord[0], coord[1]);
 	if (mq_send(cola, buf, MAXMSGSIZE, 1) < 0) {
 		perror("Error enviando ataque nave");
 		raise(SIGUSR1);
@@ -63,6 +67,7 @@ void atacar_nave() {
  * de movimiento.
  */
 void mover_nave() {
+	sem_wait(mutex);
 	int x = mapa->info_naves[idjefe][id].posx, y = mapa->info_naves[idjefe][id].posy; 
 	char buf[MAXMSGSIZE];
 
@@ -77,10 +82,11 @@ void mover_nave() {
 			case 3:
 				x -= randint(1, MOVER_ALCANCE + 1); break;
 		}
-	} while(x < 0 || y < 0 || x > MAPA_MAXX || y > MAPA_MAXY || !mapa_is_casilla_vacia(mapa, x, y));	
+	} while(x < 0 || y < 0 || x > MAPA_MAXX || y > MAPA_MAXY);	
 
 	sprintf(buf, "MOVER %d %d %d %d", mapa->info_naves[idjefe][id].posy, mapa->info_naves[idjefe][id].posx, 
 		y, x);	
+	sem_post(mutex);
 	if (mq_send(cola, buf, MAXMSGSIZE, 1) < 0) {
 		perror("Error enviando movimiento nave");
 		kill(0, SIGTERM);
@@ -89,8 +95,10 @@ void mover_nave() {
 }
 
 void destruir_nave() {
+	sem_wait(mutex);
 	mapa->info_naves[idjefe][id].viva = false;
 	mapa->num_naves[idjefe]--;
+	sem_post(mutex);
 	raise(SIGUSR1);
 }
 
@@ -121,6 +129,14 @@ int main (int argc, char *argv[]) {
 		destruir_nave();
 	}
 	if ((sem_ini = sem_open(SEM_INICIO, O_RDWR)) == SEM_FAILED) {
+		perror("Error abriendo semáforo nave");
+		destruir_nave();
+	}
+	if ((mutex = sem_open(SEM_MEMORIA, O_RDWR)) == SEM_FAILED) {
+		perror("Error abriendo semáforo nave");
+		destruir_nave();
+	}
+	if ((sem_pantalla= sem_open(SEM_PANTALLA, O_RDWR)) == SEM_FAILED) {
 		perror("Error abriendo semáforo nave");
 		destruir_nave();
 	}

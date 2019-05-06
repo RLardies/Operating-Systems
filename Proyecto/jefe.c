@@ -16,17 +16,19 @@
 
 int simpipe, id = -1, shmfd = -1;
 int pipes[N_NAVES][2] = { -1 };
-sem_t *sem_ini = NULL;
+sem_t *sem_ini = NULL, *mutex = NULL, *sem_pantalla = NULL;
 tipo_mapa *mapa = NULL;
 
 void manejador_SIGUSR1(int sig) {
 
+	sem_wait(mutex);
 	for (int i = 0; i < N_NAVES; i++) {
 		if (mapa->info_naves[id][i].viva == true) {
 			write(pipes[i][1], DESTRUIR, sizeof(DESTRUIR));
 			close(pipes[i][1]);				
 		}
 	}
+	sem_post(mutex);
 	while (wait(NULL) > 0);
 	close(simpipe);
 	if (mapa != NULL) munmap(mapa, sizeof(tipo_mapa));
@@ -85,6 +87,14 @@ int main(int argc, char *argv[]) {
 		perror("Error abriendo semáforo jefe");
 		raise(SIGUSR1);
 	}	
+	if ((mutex = sem_open(SEM_MEMORIA, O_RDWR)) == SEM_FAILED) {
+		perror("Error abriendo semáforo jefe");
+		raise(SIGUSR1);
+	}	
+	if ((sem_pantalla = sem_open(SEM_PANTALLA, O_RDWR)) == SEM_FAILED) {
+		perror("Error abriendo semáforo jefe");
+		raise(SIGUSR1);
+	}	
 	if ((shmfd = shm_open(SHM_MAP_NAME, O_RDONLY, S_IRUSR)) < 0) {
 		perror("Error abriendo memoria jefe");
 		raise(SIGUSR1);
@@ -103,7 +113,9 @@ int main(int argc, char *argv[]) {
 			raise(SIGUSR1);
 		}	   
 		if (strcmp(buf, TURNO) == 0) {
+			sem_wait(mutex);
 			while (mapa->info_naves[id][auxid = randint(0, N_NAVES)].viva == false);
+			sem_post(mutex);
 			for (int i = 0; i < N_ACCIONES; i++) {
 				switch(randint(0, 2)) {
 					case 0:
@@ -123,12 +135,14 @@ int main(int argc, char *argv[]) {
 		}
 		else if (strcmp(buf, FIN) == 0) {
 			for (int i = 0; i < N_NAVES; i++) {
+				sem_wait(mutex);
 				if (mapa->info_naves[id][i].viva == true) {
 					if (write(pipes[i][1], DESTRUIR, sizeof(DESTRUIR)) < 0) {
 						perror("Error mandando destruir a las naves");
 						raise(SIGUSR1);
 					}
 				}
+				sem_post(mutex);
 			}
 		}
 		else {

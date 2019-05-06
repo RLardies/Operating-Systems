@@ -18,7 +18,7 @@ mqd_t cola = -1;
 int shmfd = -1;
 tipo_mapa *mapa = NULL;
 sem_t *sem_inicio = NULL, *mutex = NULL, *sem_pantalla = NULL;
-int pipes[N_EQUIPOS][2] = { -1 };
+int pipes[N_EQUIPOS][2] = {{ -1 }};
 
 void manejador_SIGTERM(int sig) {
 	for (int i = 0; i < N_EQUIPOS; i++) {
@@ -52,6 +52,37 @@ void manejador_SIGTERM(int sig) {
 	exit(EXIT_SUCCESS);
 }
 
+void ceder_turno() {
+	for (int i = 0; i < N_EQUIPOS; i++) {
+		if (write(pipes[i][1], TURNO, sizeof(TURNO)) < 0) {
+			perror("Error enviando turno");
+			raise(SIGTERM);
+		}
+	}
+}
+
+void manejador_SIGALRM(int sig) {
+	int i, j = -1;
+	sem_wait(mutex);
+	mapa_restore(mapa);
+	for (i = 0; i < N_EQUIPOS; i++) {
+		if (mapa->num_naves[i] > 0) {
+			if (j != -1) {
+				sem_post(mutex);
+				ceder_turno();
+				alarm(5);
+				return;
+			}
+			j = i;
+		}
+	}
+	sem_wait(sem_pantalla);
+	if (j == -1) printf("Simulador: Ha habido un empate!\n");
+	else printf("El ganador es el equipo número %d!\n", j);
+	sem_post(sem_pantalla);
+	raise(SIGTERM);
+}
+
 void distribuir_naves(tipo_mapa *mapa) {
 	int i, j, x, y;
 	tipo_nave auxnave = {
@@ -68,7 +99,8 @@ void distribuir_naves(tipo_mapa *mapa) {
 			auxnave.equipo = i;
 			auxnave.numNave = j;
 			sem_wait(mutex);
-			while (mapa_is_casilla_vacia(mapa, (y = randint(0, MAPA_MAXY)), (x = randint(0, MAPA_MAXX))) == false);
+			while (mapa_is_casilla_vacia(mapa, (y = randint(0, MAPA_MAXY)), 
+				(x = randint(0, MAPA_MAXX))) == false);
 			sem_post(mutex);
 			auxnave.posx = x;
 			auxnave.posy = y;
@@ -129,8 +161,14 @@ int main() {
 		perror("Error en sigaction");
 		exit(EXIT_FAILURE);
 	}
+	act.sa_handler = manejador_SIGALRM;
+	if (sigaction(SIGALRM, &act, NULL) < 0) {
+		perror("Error en sigaction");
+		exit(EXIT_FAILURE);
+	}
 	sigfillset(&mask);
 	sigdelset(&mask, SIGTERM);
+	sigdelset(&mask, SIGALRM);
 	sigprocmask(SIG_SETMASK, &mask, NULL);
 	if ((cola = mq_open(QUEUE_NAME, O_CREAT | O_RDONLY, S_IRUSR | S_IWUSR, &qattr)) < 0) {
 		perror("Error creando la cola");
@@ -144,7 +182,8 @@ int main() {
 		perror("Error en ftruncate");
 		kill(0, SIGTERM);
 	}
-	if ((mapa = (tipo_mapa *) mmap(NULL, sizeof(tipo_mapa), PROT_READ | PROT_WRITE, MAP_SHARED, shmfd, 0)) == MAP_FAILED) {
+	if ((mapa = (tipo_mapa *) mmap(NULL, sizeof(tipo_mapa), PROT_READ | PROT_WRITE, 
+		MAP_SHARED, shmfd, 0)) == MAP_FAILED) {
 		perror("Error en mmap");
 		kill(0, SIGTERM);
 	}
@@ -176,7 +215,13 @@ int main() {
 	}
 	sem_post(sem_inicio);
 
-	
+	while(1) {
+		if (mq_receive(cola, buf, MAXMSGSIZE, NULL) < 0) {
+			perror("Error recibiendo mensaje acción");
+			kill(0, SIGTERM);
+		}
+		
+	}
 	
     exit(ret);
 }
