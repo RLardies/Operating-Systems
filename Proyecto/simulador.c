@@ -17,9 +17,16 @@
 mqd_t cola = -1;
 int shmfd = -1;
 tipo_mapa *mapa = NULL;
-sem_t *sem_inicio = NULL;
+sem_t *sem_inicio = NULL, *mutex = NULL, *sem_pantalla = NULL;
+int pipes[N_EQUIPOS][2] = { -1 };
 
 void manejador_SIGTERM(int sig) {
+	for (int i = 0; i < N_EQUIPOS; i++) {
+		if (pipes[i][1] != -1) {
+			write(pipes[i][1], FIN, sizeof(FIN));
+			close(pipes[i][1]);
+		}
+	}
 	while (wait(NULL) > 0);
 	if (cola > 0) {
 		mq_unlink(QUEUE_NAME);
@@ -34,6 +41,14 @@ void manejador_SIGTERM(int sig) {
 		sem_unlink(SEM_INICIO);
 		sem_close(sem_inicio);
 	}
+	if (mutex != NULL) {
+		sem_unlink(SEM_MEMORIA);
+		sem_close(mutex);
+	}
+	if (sem_pantalla != NULL) {
+		sem_unlink(SEM_PANTALLA);
+		sem_close(sem_pantalla);	
+	}
 	exit(EXIT_SUCCESS);
 }
 
@@ -44,28 +59,36 @@ void distribuir_naves(tipo_mapa *mapa) {
 		.viva = true
 	};
 
+	sem_wait(mutex);
 	mapa_clean(mapa);
+	sem_post(mutex);
 
 	for (i = 0; i < N_EQUIPOS; i++) {
 		for (j = 0; j < N_NAVES; j++) {
 			auxnave.equipo = i;
 			auxnave.numNave = j;
+			sem_wait(mutex);
 			while (mapa_is_casilla_vacia(mapa, (y = randint(0, MAPA_MAXY)), (x = randint(0, MAPA_MAXX))) == false);
+			sem_post(mutex);
 			auxnave.posx = x;
 			auxnave.posy = y;
+			sem_wait(mutex);
 			mapa_set_nave(mapa, auxnave);
+			sem_post(mutex);
 		}
 	}
 }
 
-void crear_jefes(int pipes[N_EQUIPOS][2]) {
+void crear_jefes() {
 
 	int i, j;
 	pid_t pid;
 	char buf[100];
 
 	for (i = 0; i < N_EQUIPOS; i++) {
+		sem_wait(mutex);
 		mapa_set_num_naves(mapa, i, N_NAVES);
+		sem_post(mutex);
 		if (pipe(pipes[i]) < 0) {
 			perror("Error creando pipes");
 			kill(0, SIGTERM);
@@ -75,11 +98,7 @@ void crear_jefes(int pipes[N_EQUIPOS][2]) {
 			kill(0, SIGTERM);
 		}
 		if (pid == 0) {
-			for (j = 0; j < i; j++) {
-				close(pipes[j][0]);
-				close(pipes[j][1]);
-			}
-			close(pipes[i][1]);
+			for (j = 0; j <= i; j++) close(pipes[j][1]);
 			sprintf(buf, "%d %d", pipes[i][0], i);
 			execl("jefe", "jefe", buf, (char *) NULL);
 			perror("Error en exec");
@@ -92,10 +111,10 @@ void crear_jefes(int pipes[N_EQUIPOS][2]) {
 int main() {
 
 	int ret=0, i, j;
-	int pipes[N_EQUIPOS][2];
 	tipo_mapa *mapa;
 	char buf[100];
 	struct sigaction act;
+	sigset_t mask;
 	struct mq_attr qattr = {
 		.mq_flags = 0,
 		.mq_maxmsg = 10,
@@ -110,7 +129,10 @@ int main() {
 		perror("Error en sigaction");
 		exit(EXIT_FAILURE);
 	}
-	if ((cola = mq_open(QUEUE_NAME, O_CREAT | O_RDONLY, S_IRUSR | S_IWUSR)) < 0) {
+	sigfillset(&mask);
+	sigdelset(&mask, SIGTERM);
+	sigprocmask(SIG_SETMASK, &mask, NULL);
+	if ((cola = mq_open(QUEUE_NAME, O_CREAT | O_RDONLY, S_IRUSR | S_IWUSR, &qattr)) < 0) {
 		perror("Error creando la cola");
 		kill(0, SIGTERM);
 	}
@@ -130,8 +152,16 @@ int main() {
 		perror("Error creando el semaforo");
 		kill(0, SIGTERM);
 	}
+	if ((mutex = sem_open(SEM_MEMORIA, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, 1)) == SEM_FAILED) {
+		perror("Error creando el semaforo");
+		kill(0, SIGTERM);
+	}
+	if ((sem_pantalla= sem_open(SEM_PANTALLA, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, 1)) == SEM_FAILED) {
+		perror("Error creando el semaforo");
+		kill(0, SIGTERM);
+	}
 
-	crear_jefes(pipes);
+	crear_jefes();
 	distribuir_naves(mapa);		
 
 	for (i = 0; i < N_NAVES * N_EQUIPOS; i++) {
@@ -144,6 +174,9 @@ int main() {
 			kill(0, SIGTERM);
 		}
 	}
+	sem_post(sem_inicio);
+
+	
 	
     exit(ret);
 }
