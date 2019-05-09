@@ -53,6 +53,7 @@ typedef struct {
 	tipo_nave info_naves[N_EQUIPOS][N_NAVES];
 	tipo_casilla casillas[MAPA_MAXY][MAPA_MAXX];
 	int num_naves[N_EQUIPOS]; // Número de naves vivas en un equipo
+	bool finalizado;
 } tipo_mapa;
 
 #define SHM_MAP_NAME "/shm_naves"

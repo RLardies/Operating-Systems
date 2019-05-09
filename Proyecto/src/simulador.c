@@ -14,6 +14,7 @@
 
 #include "mapa.h"
 
+
 mqd_t cola = -1;
 int shmfd = -1;
 tipo_mapa *mapa = NULL;
@@ -49,6 +50,7 @@ void manejador_SIGTERM(int sig) {
 		sem_unlink(SEM_PANTALLA);
 		sem_close(sem_pantalla);	
 	}
+	mapa->finalizado = true;
 	exit(EXIT_SUCCESS);
 }
 
@@ -269,7 +271,7 @@ int main() {
 		raise(SIGTERM);
 	}
 	printf("Simulador inicializando semáforos\n");
-	if ((sem_inicio = sem_open(SEM_INICIO, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, 0)) == SEM_FAILED) {
+	if ((sem_inicio = sem_open(SEM_INICIO, O_CREAT , S_IRUSR | S_IWUSR, 0)) == SEM_FAILED) {
 		perror("Error creando el semaforo");
 		raise(SIGTERM);
 	}
@@ -299,6 +301,7 @@ int main() {
 			raise(SIGTERM);
 		}
 	}
+	mapa->finalizado = false;
 	sem_post(sem_inicio);
 	raise(SIGALRM);
 
