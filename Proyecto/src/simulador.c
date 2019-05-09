@@ -22,12 +22,12 @@ sem_t *sem_inicio = NULL, *mutex = NULL, *sem_pantalla = NULL;
 int pipes[N_EQUIPOS][2] = {{ -1 }};
 
 /**
- * @brief      Manejador de la señal SIGTERM. Manda finalizar a todos los procesos jefe y los espera.
+ * @brief      Manejador de la señal SIGINT. Manda finalizar a todos los procesos jefe y los espera.
  *             Una vez terminan cierran lso recursos utilizados y termina.
  *
  * @param[in]  sig   The signal
  */
-void manejador_SIGTERM(int sig) {
+void manejador_SIGINT(int sig) {
 	for (int i = 0; i < N_EQUIPOS; i++) {
 		if (pipes[i][1] != -1) {
 			write(pipes[i][1], FIN, sizeof(FIN));
@@ -70,7 +70,7 @@ void ceder_turno() {
 	for (int i = 0; i < N_EQUIPOS; i++) {
 		if (write(pipes[i][1], TURNO, sizeof(TURNO)) < 0) {
 			perror("Error enviando turno");
-			raise(SIGTERM);
+			raise(SIGINT);
 		}
 	}
 }
@@ -104,7 +104,7 @@ void manejador_SIGALRM(int sig) {
 	if (j == -1) printf("Simulador: Ha habido un empate!\n");
 	else printf("**** EQUIPO GANADOR %c *******\n", symbol_equipos[j]);
 	sem_post(sem_pantalla);
-	raise(SIGTERM);
+	raise(SIGINT);
 }
 /**
  * @brief      Distribuye las naves a lo largo del mapa de forma completamente aleatoria.
@@ -153,18 +153,18 @@ void crear_jefes() {
 		sem_post(mutex);
 		if (pipe(pipes[i]) < 0) {
 			perror("Error creando pipes");
-			raise(SIGTERM);
+			raise(SIGINT);
 		}
 		if ((pid = fork()) < 0) {
 			perror("Error creando jefe");
-			raise(SIGTERM);
+			raise(SIGINT);
 		}
 		if (pid == 0) {
 			for (j = 0; j <= i; j++) close(pipes[j][1]);
 			sprintf(buf, "%d %d", pipes[i][0], i);
 			execl("jefe", "jefe", buf, (char *) NULL);
 			perror("Error en exec");
-			raise(SIGTERM);
+			raise(SIGINT);
 		}	
 		close(pipes[i][0]);
 		sem_wait(sem_pantalla);
@@ -247,7 +247,7 @@ void accion_atacar(int oriy, int orix, int desy, int desx) {
 		if (write(pipes[mapa->casillas[desy][desx].equipo][1], buf, MAXMSGSIZE) < 0) {
 			perror("Error enviando destrucción al jefe");
 			sem_post(mutex);
-			raise(SIGTERM);
+			raise(SIGINT);
 		}
 		sem_wait(sem_pantalla);
 		printf(": target destruido\n");
@@ -276,10 +276,10 @@ int main() {
 		.mq_curmsgs = 0
 	};
 	printf("Simulador estableciendo máscara y manejadores\n");
-	act.sa_handler = manejador_SIGTERM;
+	act.sa_handler = manejador_SIGINT;
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = 0;
-	if (sigaction(SIGTERM, &act, NULL) < 0) {
+	if (sigaction(SIGINT, &act, NULL) < 0) {
 		perror("Error en sigaction");
 		exit(EXIT_FAILURE);
 	}
@@ -289,7 +289,7 @@ int main() {
 		exit(EXIT_FAILURE);
 	}
 	sigfillset(&mask);
-	sigdelset(&mask, SIGTERM);
+	sigdelset(&mask, SIGINT);
 	sigprocmask(SIG_SETMASK, &mask, NULL);
 	sigfillset(&mask);
 	sigdelset(&mask, SIGALRM);
@@ -297,35 +297,35 @@ int main() {
 	printf("Simulador creando cola de mensajes\n");
 	if ((cola = mq_open(QUEUE_NAME, O_CREAT | O_RDONLY, S_IRUSR | S_IWUSR, &qattr)) < 0) {
 		perror("Error creando la cola");
-		raise(SIGTERM);
+		raise(SIGINT);
 	}
 	printf("Simulador creando memoria compartida\n");
 	if ((shmfd = shm_open(SHM_MAP_NAME, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR)) < 0) {
 		perror("Error abriendo memoria compartida");
-		raise(SIGTERM);
+		raise(SIGINT);
 	}
 	if (ftruncate(shmfd, sizeof(tipo_mapa)) < 0) {
 		perror("Error en ftruncate");
-		raise(SIGTERM);
+		raise(SIGINT);
 	}
 	printf("Simulador inicializando mapa\n");
 	if ((mapa = (tipo_mapa *) mmap(NULL, sizeof(tipo_mapa), PROT_READ | PROT_WRITE, 
 		MAP_SHARED, shmfd, 0)) == MAP_FAILED) {
 		perror("Error en mmap");
-		raise(SIGTERM);
+		raise(SIGINT);
 	}
 	printf("Simulador inicializando semáforos\n");
 	if ((sem_inicio = sem_open(SEM_INICIO, O_CREAT , S_IRUSR | S_IWUSR, 0)) == SEM_FAILED) {
 		perror("Error creando el semaforo");
-		raise(SIGTERM);
+		raise(SIGINT);
 	}
 	if ((mutex = sem_open(SEM_MEMORIA, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, 1)) == SEM_FAILED) {
 		perror("Error creando el semaforo");
-		raise(SIGTERM);
+		raise(SIGINT);
 	}
 	if ((sem_pantalla= sem_open(SEM_PANTALLA, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, 1)) == SEM_FAILED) {
 		perror("Error creando el semaforo");
-		raise(SIGTERM);
+		raise(SIGINT);
 	}
 
 	crear_jefes();
@@ -337,11 +337,11 @@ int main() {
 	for (i = 0; i < N_NAVES * N_EQUIPOS; i++) {
 		if (mq_receive(cola, buf, MAXMSGSIZE, NULL) < 0) {
 			perror("Error recibiendo mensaje inicial");
-			raise(SIGTERM);
+			raise(SIGINT);
 			}
 		if (strcmp(buf, "READY")) {
 			printf("Error en el mensaje inicial\n");
-			raise(SIGTERM);
+			raise(SIGINT);
 		}
 		printf("Simulador : %d naves preparadas\n", i + 1);
 	}
@@ -364,7 +364,7 @@ int main() {
 		for (i = 0; i < equipos_vivos * N_ACCIONES; i++) {
 			if (mq_receive(cola, buf, MAXMSGSIZE, NULL) < 0) {
 				perror("Error recibiendo mensaje acción");
-				raise(SIGTERM);
+				raise(SIGINT);
 			}
 		
 			sem_wait(sem_pantalla);
@@ -382,7 +382,7 @@ int main() {
 				sem_wait(sem_pantalla);
 				printf("%s\n", buf2);
 				perror("Error en mensaje de acción");
-				raise(SIGTERM);
+				raise(SIGINT);
 			}
 		}
 		sigsuspend(&mask);
