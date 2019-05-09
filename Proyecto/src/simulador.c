@@ -21,6 +21,12 @@ tipo_mapa *mapa = NULL;
 sem_t *sem_inicio = NULL, *mutex = NULL, *sem_pantalla = NULL;
 int pipes[N_EQUIPOS][2] = {{ -1 }};
 
+/**
+ * @brief      Manejador de la señal SIGTERM. Manda finalizar a todos los procesos jefe y los espera.
+ *             Una vez terminan cierran lso recursos utilizados y termina.
+ *
+ * @param[in]  sig   The signal
+ */
 void manejador_SIGTERM(int sig) {
 	for (int i = 0; i < N_EQUIPOS; i++) {
 		if (pipes[i][1] != -1) {
@@ -54,6 +60,9 @@ void manejador_SIGTERM(int sig) {
 	exit(EXIT_SUCCESS);
 }
 
+/**
+ * @brief      Realiza las acciones necesarias para iniciar un turno nuevo.
+ */
 void ceder_turno() {
 	sem_wait(sem_pantalla);
 	printf("\n\nSimulador : nuevo TURNO\n");
@@ -66,8 +75,17 @@ void ceder_turno() {
 	}
 }
 
+/**
+ * @brief      Manejador de la señal SIGALRM. Se encarga de señalar los inicios de turno y 
+ *             comprobar si hay algún equipo ganador. Además manda la señal SIGUSR1 a todo el grupo
+ *             para que las naves que hayan sido destruidas durante el turno se destruyan completamente.
+ *
+ * @param[in]  sig   Señal
+ */
 void manejador_SIGALRM(int sig) {
 	int i, j = -1;
+
+	kill(0, SIGUSR1);
 	sem_wait(mutex);
 	mapa_restore(mapa);
 	for (i = 0; i < N_EQUIPOS; i++) {
@@ -88,14 +106,11 @@ void manejador_SIGALRM(int sig) {
 	sem_post(sem_pantalla);
 	raise(SIGTERM);
 }
-
+/**
+ * @brief      Distribuye las naves a lo largo del mapa de forma completamente aleatoria.
+ */
 void distribuir_naves() {
 	int i, j, x, y;
-	tipo_nave auxnave = {
-		.vida = VIDA_MAX,
-		.viva = true
-	};
-
 	sem_wait(sem_pantalla);
 	printf("Simulador : distribuyendo naves\n");
 	sem_post(sem_pantalla);
@@ -105,22 +120,26 @@ void distribuir_naves() {
 
 	for (i = 0; i < N_EQUIPOS; i++) {
 		for (j = 0; j < N_NAVES; j++) {
-			auxnave.equipo = i;
-			auxnave.numNave = j;
 			sem_wait(mutex);
 			while (mapa_is_casilla_vacia(mapa, (y = randint(0, MAPA_MAXY)), 
 				(x = randint(0, MAPA_MAXX))) == false);
 			sem_post(mutex);
 
-			auxnave.posx = x;
-			auxnave.posy = y;
 			sem_wait(mutex);
-			mapa_set_nave(mapa, auxnave);
+			mapa->info_naves[i][j].posx = x;
+			mapa->info_naves[i][j].posy = y;
+			mapa->info_naves[i][j].viva = true;
+			mapa->info_naves[i][j].equipo = i;
+			mapa->info_naves[i][j].numNave = j;
+			mapa->info_naves[i][j].vida = VIDA_MAX;
+			mapa_set_nave(mapa, mapa->info_naves[i][j]);
 			sem_post(mutex);
 		}
 	}
 }
-
+/**
+ * @brief      Crea los jefes de cada equipo junto con las pipes con los que se va a comunicar.
+ */
 void crear_jefes() {
 
 	int i, j;
@@ -154,7 +173,18 @@ void crear_jefes() {
 	}
 }
 
+/**
+ * @brief      Función encargada de simular el movimiento de la nave, moviéndola a la posición
+ *             indicada si la casilla destino está vaciía, o no hacerlo e indicarlo si no lo está.
+ *
+ * @param[in]  oriy  Coordenada y del origen.
+ * @param[in]  orix  Coordenada x del origen.
+ * @param[in]  desy  Coordenada y del destino.
+ * @param[in]  desx  Coordenada x del destino.
+ */
 void accion_mover(int oriy, int orix, int desy, int desx) {
+
+	int nave, equipo;
 	sem_wait(sem_pantalla);
 	printf("ACCION MOVER [%c%d] %d,%d -> %d,%d", 
 		mapa->casillas[oriy][orix].simbolo, mapa->casillas[oriy][orix].numNave, 
@@ -164,16 +194,18 @@ void accion_mover(int oriy, int orix, int desy, int desx) {
 	if (!mapa_is_casilla_vacia(mapa, desy, desx)) {
 		sem_post(mutex);
 		sem_wait(sem_pantalla);
-		printf(": FALLIDO : Casilla llena");
+		printf(": FALLIDO : Casilla llena\n");
 		sem_post(sem_pantalla);
 		return;
 	}
 	mapa->casillas[desy][desx].simbolo = 
 		mapa->casillas[oriy][orix].simbolo;
-	mapa->casillas[desy][desx].numNave = 
-		mapa->casillas[oriy][orix].numNave;
-	mapa->casillas[desy][desx].equipo = 
-		mapa->casillas[oriy][orix].equipo;
+	nave = mapa->casillas[oriy][orix].numNave;
+	mapa->casillas[desy][desx].numNave = nave;
+	equipo = mapa->casillas[oriy][orix].equipo;
+	mapa->casillas[desy][desx].equipo = equipo;
+	mapa->info_naves[equipo][nave].posy = desy;
+	mapa->info_naves[equipo][nave].posx = desx;
 	mapa_clean_casilla(mapa, oriy, orix);
 	sem_post(mutex);
 	sem_wait(sem_pantalla);
@@ -181,6 +213,15 @@ void accion_mover(int oriy, int orix, int desy, int desx) {
 	sem_post(sem_pantalla);
 }
 
+/**
+ * @brief      Función encargada de hacer el ataque de una nave a otra, indicando si se ha acertado a 
+ *             algún objetivo, ha fallado, o ha destruido alguna nave.
+ *
+ * @param[in]  oriy  Coordenada y de la nave atacante.
+ * @param[in]  orix  Coordenada x de la nave atacante.
+ * @param[in]  desy  Coordenada y de la nave atacada.
+ * @param[in]  desx  Coordenada x de la nave atacada.
+ */
 void accion_atacar(int oriy, int orix, int desy, int desx) {
 	char buf[MAXMSGSIZE];
 
@@ -223,8 +264,8 @@ void accion_atacar(int oriy, int orix, int desy, int desx) {
 
 int main() {
 
-	int i, x1, x2, x3, x4, naves_vivas;
-	char buf[MAXMSGSIZE], buf2[30];
+	int i, x1, x2, x3, x4;
+	char buf[MAXMSGSIZE], buf2[30], equipos_vivos;
 	struct sigaction act;
 	sigset_t mask;
 
@@ -315,15 +356,17 @@ int main() {
 	sigsuspend(&mask);
 
 	while(1) {
-		sem_wait(mutex);
-		for (i = 0, naves_vivas = 0; i < N_EQUIPOS; i++) 
-			naves_vivas += mapa->num_naves[i];
-		sem_post(mutex);
+	
 		sem_wait(sem_pantalla);
 		printf("Simulador : escuchando cola de mensajes\n");
 		sem_post(sem_pantalla);
 
-		for (i = 0; i < naves_vivas; i++) {
+		for (i = 0, equipos_vivos = 0; i < N_EQUIPOS; i++) 
+			if (mapa->num_naves[i] > 0) equipos_vivos++;
+
+		printf("Acciones esperadas: %d\n", equipos_vivos * N_ACCIONES);
+
+		for (i = 0; i < equipos_vivos * N_ACCIONES; i++) {
 			if (mq_receive(cola, buf, MAXMSGSIZE, NULL) < 0) {
 				perror("Error recibiendo mensaje acción");
 				raise(SIGTERM);

@@ -51,10 +51,15 @@ int main() {
 
 	int shmfd;
 	tipo_mapa * mapa;
-
-
 	struct sigaction act;
 
+    if ((sem_inicio = sem_open(SEM_INICIO, O_CREAT , S_IRUSR | S_IWUSR, 0)) == SEM_FAILED) {
+    	fprintf(stderr, "Error creando el semáforo\n");
+    	return EXIT_FAILURE;
+    }
+
+	sem_wait(sem_inicio);
+	sem_post(sem_inicio);
 
     act.sa_handler = manejador_SIGINT;
 	sigemptyset(&(act.sa_mask));
@@ -62,23 +67,18 @@ int main() {
     if (sigaction(SIGINT, &act, NULL) < 0) {
         fprintf(stderr, "Error en sigaction\n");
         return EXIT_FAILURE;
-    }	
-
-    if ((sem_inicio = sem_open(SEM_INICIO, O_CREAT , S_IRUSR | S_IWUSR, 0)) == SEM_FAILED) {
-    	fprintf(stderr, "Error creando el semáforo\n");
-    	return EXIT_FAILURE;
     }
 
-    if ((shmfd = shm_open(SHM_MAP_NAME, O_RDONLY, 0)) < 0) {
-		fprintf(stderr, "Error abriendo la memoria compartida\n");
+    if ((shmfd = shm_open(SHM_MAP_NAME, O_RDONLY, S_IRUSR)) < 0) {
+		perror("Error abriendo la memoria compartida");
 		sem_close(sem_inicio);
 		return EXIT_FAILURE;
 	}
 
 	mapa = (tipo_mapa*)mmap(NULL,sizeof(tipo_mapa),PROT_READ,MAP_SHARED,shmfd,0);
 
-	if(mapa == NULL){
-		fprintf(stderr,"Error al acceder a la memoria compartida");
+	if(mapa == MAP_FAILED){
+		perror("Error al acceder a la memoria compartida");
 		sem_close(sem_inicio);
 		close(shmfd);
 		return EXIT_FAILURE;
