@@ -87,7 +87,7 @@ void manejador_SIGALRM(int sig) {
 	raise(SIGTERM);
 }
 
-void distribuir_naves(tipo_mapa *mapa) {
+void distribuir_naves() {
 	int i, j, x, y;
 	tipo_nave auxnave = {
 		.vida = VIDA_MAX,
@@ -95,7 +95,7 @@ void distribuir_naves(tipo_mapa *mapa) {
 	};
 
 	sem_wait(sem_pantalla);
-	printf("Simulador distribuyendo naves\n");
+	printf("Simulador : distribuyendo naves\n");
 	sem_post(sem_pantalla);
 	sem_wait(mutex);
 	mapa_clean(mapa);
@@ -109,6 +109,7 @@ void distribuir_naves(tipo_mapa *mapa) {
 			while (mapa_is_casilla_vacia(mapa, (y = randint(0, MAPA_MAXY)), 
 				(x = randint(0, MAPA_MAXX))) == false);
 			sem_post(mutex);
+
 			auxnave.posx = x;
 			auxnave.posy = y;
 			sem_wait(mutex);
@@ -146,13 +147,14 @@ void crear_jefes() {
 		}	
 		close(pipes[i][0]);
 		sem_wait(sem_pantalla);
-		printf("Creado jefe %c\n", symbol_equipos[i]);
+		printf("Simulador : Creado jefe %c\n", symbol_equipos[i]);
+		sem_post(sem_pantalla);
 	}
 }
 
 void accion_mover(int oriy, int orix, int desy, int desx) {
 	sem_wait(sem_pantalla);
-	printf("ACCION ATAQUE [%c%d] %d,%d -> %d,%d", 
+	printf("ACCION MOVER [%c%d] %d,%d -> %d,%d", 
 		mapa->casillas[oriy][orix].simbolo, mapa->casillas[oriy][orix].numNave, 
 		oriy, orix, desy, desx);
 	sem_post(sem_pantalla);
@@ -179,13 +181,13 @@ void accion_mover(int oriy, int orix, int desy, int desx) {
 
 void accion_atacar(int oriy, int orix, int desy, int desx) {
 	char buf[MAXMSGSIZE];
-	sem_wait(mutex);
 
 	sem_wait(sem_pantalla);
 	printf("ACCION ATAQUE [%c%d] %d,%d -> %d,%d", 
 		mapa->casillas[oriy][orix].simbolo, mapa->casillas[oriy][orix].numNave, 
 		oriy, orix, desy, desx);
 	sem_post(sem_pantalla);
+	sem_wait(mutex);
 	mapa_send_misil(mapa, oriy, orix, desy, desx);
 	if (mapa_is_casilla_vacia(mapa, desy, desx)) {
 		sem_wait(sem_pantalla);
@@ -203,25 +205,25 @@ void accion_atacar(int oriy, int orix, int desy, int desx) {
 			raise(SIGTERM);
 		}
 		sem_wait(sem_pantalla);
-		printf("target destruido\n");
+		printf(": target destruido\n");
 		sem_post(sem_pantalla);
 		sem_post(mutex);
 		return;
 	}
 	sem_post(mutex);
 	sem_wait(sem_pantalla);
-	printf("target a %d de vida\n", mapa->info_naves[mapa->casillas[desy][desx]
+	printf(": target a %d de vida\n", mapa->info_naves[mapa->casillas[desy][desx]
 		.equipo][mapa->casillas[desy][desx].numNave].vida);
 	sem_post(sem_pantalla);
 }
 
 int main() {
 
-	int ret=0, i, x1, x2, x3, x4;
-	tipo_mapa *mapa;
+	int i, x1, x2, x3, x4;
 	char buf[MAXMSGSIZE], buf2[30];
 	struct sigaction act;
 	sigset_t mask;
+
 	struct mq_attr qattr = {
 		.mq_flags = 0,
 		.mq_maxmsg = 10,
@@ -281,18 +283,21 @@ int main() {
 	}
 
 	crear_jefes();
-	distribuir_naves(mapa);		
+	distribuir_naves();
 
+	sem_wait(sem_pantalla);
+	printf("Simulador : a la espera de las naves\n");
+	sem_post(sem_pantalla);
 	for (i = 0; i < N_NAVES * N_EQUIPOS; i++) {
 		if (mq_receive(cola, buf, MAXMSGSIZE, NULL) < 0) {
 			perror("Error recibiendo mensaje inicial");
 			raise(SIGTERM);
 			}
-		printf("Simulador : %d equipos preparados\n", i + 1);
+		printf("Simulador : %d naves preparadas\n", i + 1);
 		if (strcmp(buf, "READY")) {
 			perror("Error con mensaje de inicio");
 			raise(SIGTERM);
-			}
+		}
 	}
 	sem_post(sem_inicio);
 	raise(SIGALRM);
@@ -301,6 +306,7 @@ int main() {
 		sem_wait(sem_pantalla);
 		printf("Simulador : escuchando cola de mensajes\n");
 		sem_post(sem_pantalla);
+		//Mientras esta esperando llega sigalrm y se va a la puta
 		if (mq_receive(cola, buf, MAXMSGSIZE, NULL) < 0) {
 			perror("Error recibiendo mensaje acción");
 			raise(SIGTERM);
@@ -317,10 +323,10 @@ int main() {
 			accion_atacar(x1, x2, x3, x4);
 		}
 		else {
+			sem_wait(sem_pantalla);
+			printf("%s\n", buf2);
 			perror("Error en mensaje de acción");
 			raise(SIGTERM);
 		}
 	}
-	
-    exit(ret);
 }

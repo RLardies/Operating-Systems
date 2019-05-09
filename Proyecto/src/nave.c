@@ -14,10 +14,10 @@
 
 #include "mapa.h"
 
-int pipejefe, shmfd = -1, idjefe, id;
-mqd_t cola = -1;
-tipo_mapa *mapa = NULL;
-sem_t *sem_ini = NULL, *mutex = NULL, *sem_pantalla = NULL;
+static int pipejefe, shmfd = -1, idjefe, id;
+static mqd_t cola = -1;
+static tipo_mapa *mapa = NULL;
+static sem_t *sem_ini = NULL, *mutex = NULL, *sem_pantalla = NULL;
 
 void manejador_SIGUSR1(int sig) {
 	close(pipejefe);
@@ -39,7 +39,10 @@ void buscar_nave(tipo_mapa *mapa, int coord[2]) {
 		sem_wait(mutex);
 		while (mapa_get_distancia(mapa, coord[0] = randint(0, MAPA_MAXY), coord[1] = randint(0, MAPA_MAXX), y, x) > ATAQUE_ALCANCE 
 				|| mapa_get_casilla(mapa, coord[0], coord[1]).equipo == idjefe);
-		if (!mapa_is_casilla_vacia(mapa, y, x)) return;
+		if (!mapa_is_casilla_vacia(mapa, y, x)) {
+			sem_post(mutex);
+			return;
+		}
 		sem_post(mutex);
 	}
 }
@@ -116,19 +119,6 @@ int main (int argc, char *argv[]) {
 		perror("Error en sigaction nave");
 		destruir_nave();
 	}
-
-	if ((cola = mq_open(QUEUE_NAME, O_WRONLY)) < 0) {
-		perror("Error abriendo cola nave");
-		destruir_nave();
-	}	
-	if ((shmfd = shm_open(SHM_MAP_NAME, O_RDONLY, S_IRUSR)) < 0) {
-		perror("Error abriendo memoria nave");
-		destruir_nave();
-	}
-	if ((mapa = (tipo_mapa *) mmap(NULL, sizeof(tipo_mapa), PROT_READ, MAP_PRIVATE, shmfd, 0)) == MAP_FAILED) {
-		perror("Error en mmap nave");
-		destruir_nave();
-	}
 	if ((sem_ini = sem_open(SEM_INICIO, O_RDWR)) == SEM_FAILED) {
 		perror("Error abriendo semáforo nave");
 		destruir_nave();
@@ -139,6 +129,27 @@ int main (int argc, char *argv[]) {
 	}
 	if ((sem_pantalla= sem_open(SEM_PANTALLA, O_RDWR)) == SEM_FAILED) {
 		perror("Error abriendo semáforo nave");
+		destruir_nave();
+	}
+	sem_wait(sem_pantalla);
+	printf("Nave %d/%d abriendo cola\n", idjefe, id);
+	sem_post(sem_pantalla);
+	if ((cola = mq_open(QUEUE_NAME, O_WRONLY)) < 0) {
+		perror("Error abriendo cola nave");
+		destruir_nave();
+	}
+	sem_wait(sem_pantalla);
+	printf("Nave %d/%d abriendo memoria compartida\n", idjefe, id);
+	sem_post(sem_pantalla);
+	if ((shmfd = shm_open(SHM_MAP_NAME, O_RDONLY, S_IRUSR)) < 0) {
+		perror("Error abriendo memoria nave");
+		destruir_nave();
+	}
+	sem_wait(sem_pantalla);
+	printf("Nave %d/%d inicializando mapa\n", idjefe, id);
+	sem_post(sem_pantalla);
+	if ((mapa = (tipo_mapa *) mmap(NULL, sizeof(tipo_mapa), PROT_READ, MAP_SHARED, shmfd, 0)) == MAP_FAILED) {
+		perror("Error en mmap nave");
 		destruir_nave();
 	}
 

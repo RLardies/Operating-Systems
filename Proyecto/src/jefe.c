@@ -14,10 +14,10 @@
 
 #include "mapa.h"
 
-int simpipe, id = -1, shmfd = -1;
-int pipes[N_NAVES][2] = {{ -1 }};
-sem_t *sem_ini = NULL, *mutex = NULL, *sem_pantalla = NULL;
-tipo_mapa *mapa = NULL;
+static int simpipe, id = -1, shmfd = -1;
+static int pipes[N_NAVES][2] = {{ -1 }};
+static sem_t *sem_ini = NULL, *mutex = NULL, *sem_pantalla = NULL;
+static tipo_mapa *mapa = NULL;
 
 void manejador_SIGUSR1(int sig) {
 
@@ -43,6 +43,10 @@ void crear_naves() {
 	char buf[100];
 	int i, j; 
 
+	sem_wait(sem_pantalla);
+	printf("Jefe %c : creando naves\n", symbol_equipos[id]);
+	sem_post(sem_pantalla);
+
 	for (i = 0; i < N_NAVES; i++) {
 		if (pipe(pipes[i]) < 0) {
 			perror("Error creando pipes jefe");
@@ -58,7 +62,10 @@ void crear_naves() {
 			execl("nave", "nave", buf, (char *) NULL);
 			perror("Error en exec");
 			raise(SIGUSR1);
-		}	
+		}
+		sem_wait(sem_pantalla);
+		printf("Jefe %c : Creada nave %d\n", symbol_equipos[id], i);
+		sem_post(sem_pantalla);
 		close(pipes[i][0]);
 	}
 }
@@ -94,15 +101,23 @@ int main(int argc, char *argv[]) {
 	if ((sem_pantalla = sem_open(SEM_PANTALLA, O_RDWR)) == SEM_FAILED) {
 		perror("Error abriendo semáforo jefe");
 		raise(SIGUSR1);
-	}	
+	}
+	sem_wait(sem_pantalla);
+	printf("Jefe %c abriendo memoria compartida\n", symbol_equipos[id]);
+	sem_post(sem_pantalla);
 	if ((shmfd = shm_open(SHM_MAP_NAME, O_RDONLY, S_IRUSR)) < 0) {
 		perror("Error abriendo memoria jefe");
 		raise(SIGUSR1);
 	}
-	if ((mapa = (tipo_mapa *) mmap(NULL, sizeof(tipo_mapa), PROT_READ, O_RDONLY, shmfd, 0)) == MAP_FAILED) {
+	sem_wait(sem_pantalla);
+	printf("Jefe %c inicializando mapa\n", symbol_equipos[id]);
+	sem_post(sem_pantalla);
+	if ((mapa = (tipo_mapa *) mmap(NULL, sizeof(tipo_mapa), PROT_READ, MAP_SHARED, shmfd, 0)) == MAP_FAILED) {
 		perror("Error en mmap jefe");
 		raise(SIGUSR1);
 	}
+
+	crear_naves();
 
 	sem_wait(sem_ini);
 	sem_post(sem_ini);
@@ -139,6 +154,7 @@ int main(int argc, char *argv[]) {
 				if (mapa->info_naves[id][i].viva == true) {
 					if (write(pipes[i][1], DESTRUIR, sizeof(DESTRUIR)) < 0) {
 						perror("Error mandando destruir a las naves");
+						sem_post(mutex);
 						raise(SIGUSR1);
 					}
 				}
