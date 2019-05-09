@@ -20,6 +20,12 @@ static int pipes[N_NAVES][2] = {{ -1 }};
 static sem_t *sem_ini = NULL, *mutex = NULL, *sem_pantalla = NULL;
 static tipo_mapa *mapa = NULL;
 
+/**
+ * @brief      Manejador de la señal SIGUSR2. Se encarga de mandar finalizar a todas sus naves,
+ *             esperarlas, liberar los recursos utilizados y terminar.
+ *
+ * @param[in]  sig   Señal
+ */
 void manejador_SIGUSR2(int sig) {
 
 	sem_wait(mutex);
@@ -38,6 +44,9 @@ void manejador_SIGUSR2(int sig) {
 	exit(EXIT_SUCCESS);
 }
 
+/**
+ * @brief      Crea las naves de su equipo y los pipes con los que se va a comunicar con ellas.
+ */
 void crear_naves() {
 
 	pid_t pid;
@@ -134,6 +143,10 @@ int main(int argc, char *argv[]) {
 				sem_wait(mutex);
 				while (mapa->info_naves[id][auxid = randint(0, N_NAVES)].viva == false);
 				sem_post(mutex);
+				/**
+				 * Enviamos dos mensajes al pipe, uno con el tamaño del mensaje, y otro con
+				 * el mensaje en sí.
+				 */
 				switch(randint(0, 2)) {
 					case 0:
 						if (write(pipes[auxid][1], &sizeatacar, sizeof(int)) < 0) {

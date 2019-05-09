@@ -345,11 +345,6 @@ int main() {
 		}
 		printf("Simulador : %d naves preparadas\n", i + 1);
 	}
-	sem_unlink(SEM_INICIO);
-	sem_unlink(SEM_MEMORIA);
-	sem_unlink(SEM_PANTALLA);
-	mq_unlink(QUEUE_NAME);
-	shm_unlink(SHM_MAP_NAME);
 	mapa->finalizado = false;
 	sem_post(sem_inicio);
 	raise(SIGALRM);
