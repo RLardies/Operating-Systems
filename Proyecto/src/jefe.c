@@ -11,6 +11,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "mapa.h"
 
@@ -116,7 +117,7 @@ int main(int argc, char *argv[]) {
 		perror("Error en mmap jefe");
 		raise(SIGUSR1);
 	}
-
+	srand(time(NULL) + getpid());
 	crear_naves();
 
 	sem_wait(sem_ini);
@@ -132,6 +133,7 @@ int main(int argc, char *argv[]) {
 			while (mapa->info_naves[id][auxid = randint(0, N_NAVES)].viva == false);
 			sem_post(mutex);
 			for (int i = 0; i < N_ACCIONES; i++) {
+				printf("Jefe %d manda accion\n", id);
 				switch(randint(0, 2)) {
 					case 0:
 						if (write(pipes[auxid][1], ATACAR, sizeof(ATACAR)) < 0) {
@@ -148,27 +150,17 @@ int main(int argc, char *argv[]) {
 				}
 			}
 		}
-		else if (strcmp(buf, FIN) == 0) {
-			for (int i = 0; i < N_NAVES; i++) {
-				sem_wait(mutex);
-				if (mapa->info_naves[id][i].viva == true) {
-					if (write(pipes[i][1], DESTRUIR, sizeof(DESTRUIR)) < 0) {
-						perror("Error mandando destruir a las naves");
-						sem_post(mutex);
-						raise(SIGUSR1);
-					}
-				}
-				sem_post(mutex);
-			}
-		}
+		else if (strcmp(buf, FIN) == 0) raise(SIGUSR1);
 		else {
 			if (sscanf(buf, "%s %d", buf2, &auxid) < 0) {
 				perror("Error obteniendo mensaje del simulador");
 				raise(SIGUSR1);
 			}
-			if (write(pipes[auxid][1], DESTRUIR, sizeof(DESTRUIR)) < 0) {
-				perror("Error mandando destruir a las naves");
-				raise(SIGUSR1);
+			if (strcmp(buf2, DESTRUIR)) {
+				if (write(pipes[auxid][1], DESTRUIR, sizeof(DESTRUIR)) < 0) {
+					perror("Error mandando destruir a las naves");
+					raise(SIGUSR1);
+				}
 			}
 		}
 	}

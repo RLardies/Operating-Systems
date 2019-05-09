@@ -29,6 +29,7 @@ void manejador_SIGTERM(int sig) {
 		}
 	}
 	while (wait(NULL) > 0);
+	mapa->finalizado = true;
 	if (cola > 0) {
 		mq_unlink(QUEUE_NAME);
 		mq_close(cola);
@@ -50,7 +51,6 @@ void manejador_SIGTERM(int sig) {
 		sem_unlink(SEM_PANTALLA);
 		sem_close(sem_pantalla);	
 	}
-	mapa->finalizado = true;
 	exit(EXIT_SUCCESS);
 }
 
@@ -164,7 +164,7 @@ void accion_mover(int oriy, int orix, int desy, int desx) {
 	if (!mapa_is_casilla_vacia(mapa, desy, desx)) {
 		sem_post(mutex);
 		sem_wait(sem_pantalla);
-		printf(": FALLIDO : Casilla llena\n");
+		printf(": FALLIDO : Casilla llena");
 		sem_post(sem_pantalla);
 		return;
 	}
@@ -195,6 +195,8 @@ void accion_atacar(int oriy, int orix, int desy, int desx) {
 		sem_wait(sem_pantalla);
 		printf(": FALLIDO : Casilla target vacía\n");
 		sem_post(sem_pantalla);
+		sem_post(mutex);
+		return;
 	}
 	mapa->info_naves[mapa->casillas[desy][desx].equipo][mapa->casillas[desy][desx]
 		.numNave].vida -= ATAQUE_DANO;
@@ -221,7 +223,7 @@ void accion_atacar(int oriy, int orix, int desy, int desx) {
 
 int main() {
 
-	int i, x1, x2, x3, x4;
+	int i, x1, x2, x3, x4, naves_vivas;
 	char buf[MAXMSGSIZE], buf2[30];
 	struct sigaction act;
 	sigset_t mask;
@@ -247,8 +249,9 @@ int main() {
 	}
 	sigfillset(&mask);
 	sigdelset(&mask, SIGTERM);
-	sigdelset(&mask, SIGALRM);
 	sigprocmask(SIG_SETMASK, &mask, NULL);
+	sigfillset(&mask);
+	sigdelset(&mask, SIGALRM);
 
 	printf("Simulador creando cola de mensajes\n");
 	if ((cola = mq_open(QUEUE_NAME, O_CREAT | O_RDONLY, S_IRUSR | S_IWUSR, &qattr)) < 0) {
@@ -295,41 +298,55 @@ int main() {
 			perror("Error recibiendo mensaje inicial");
 			raise(SIGTERM);
 			}
-		printf("Simulador : %d naves preparadas\n", i + 1);
 		if (strcmp(buf, "READY")) {
-			perror("Error con mensaje de inicio");
+			printf("Error en el mensaje inicial\n");
 			raise(SIGTERM);
 		}
+		printf("Simulador : %d naves preparadas\n", i + 1);
 	}
+	sem_unlink(SEM_INICIO);
+	sem_unlink(SEM_MEMORIA);
+	sem_unlink(SEM_PANTALLA);
+	mq_unlink(QUEUE_NAME);
+	shm_unlink(SHM_MAP_NAME);
 	mapa->finalizado = false;
 	sem_post(sem_inicio);
 	raise(SIGALRM);
+	sigsuspend(&mask);
 
 	while(1) {
+		sem_wait(mutex);
+		for (i = 0, naves_vivas = 0; i < N_EQUIPOS; i++) 
+			naves_vivas += mapa->num_naves[i];
+		sem_post(mutex);
 		sem_wait(sem_pantalla);
 		printf("Simulador : escuchando cola de mensajes\n");
 		sem_post(sem_pantalla);
-		//Mientras esta esperando llega sigalrm y se va a la puta
-		if (mq_receive(cola, buf, MAXMSGSIZE, NULL) < 0) {
-			perror("Error recibiendo mensaje acción");
-			raise(SIGTERM);
-		}
-		sem_wait(sem_pantalla);
-		printf("Simulador : recibido en cola de mensajes\n");
-		sem_post(sem_pantalla);
-		sscanf(buf, "%s %d %d %d %d", buf2, &x1, &x2, &x3, &x4);
 
-		if (strcmp(buf2, "MOVER") == 0) {
-			accion_mover(x1, x2, x3, x4);
-		}
-		else if (strcmp(buf2, "ATACAR") == 0) {
-			accion_atacar(x1, x2, x3, x4);
-		}
-		else {
+		for (i = 0; i < naves_vivas; i++) {
+			if (mq_receive(cola, buf, MAXMSGSIZE, NULL) < 0) {
+				perror("Error recibiendo mensaje acción");
+				raise(SIGTERM);
+			}
+		
 			sem_wait(sem_pantalla);
-			printf("%s\n", buf2);
-			perror("Error en mensaje de acción");
-			raise(SIGTERM);
+			printf("Simulador : recibido en cola de mensajes\n");
+			sem_post(sem_pantalla);
+			sscanf(buf, "%s %d %d %d %d", buf2, &x1, &x2, &x3, &x4);
+
+			if (strcmp(buf2, "MOVER") == 0) {
+				accion_mover(x1, x2, x3, x4);
+			}
+			else if (strcmp(buf2, "ATACAR") == 0) {
+				accion_atacar(x1, x2, x3, x4);
+			}
+			else {
+				sem_wait(sem_pantalla);
+				printf("%s\n", buf2);
+				perror("Error en mensaje de acción");
+				raise(SIGTERM);
+			}
 		}
+		sigsuspend(&mask);
 	}
 }

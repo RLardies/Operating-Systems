@@ -63,8 +63,4 @@ typedef struct {
 #define SEM_PANTALLA "/sem_pantalla"
 #define MAXMSGSIZE 100
 
-/*** Auxiliares ***/
-
-char *itoa(int value, char *str, int base);
-
 #endif /* SRC_SIMULADOR_H_ */

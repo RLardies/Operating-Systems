@@ -11,6 +11,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "mapa.h"
 
@@ -157,6 +158,7 @@ int main (int argc, char *argv[]) {
 		perror("Error enviando mensaje nave");
 		destruir_nave();
 	}
+	srand(time(NULL) + getpid());
 
 	sem_wait(sem_ini);
 	sem_post(sem_ini);
@@ -167,11 +169,12 @@ int main (int argc, char *argv[]) {
 			kill(0, SIGTERM);
 			raise(SIGUSR1);
 		}
+		printf("Nave %d/%d\n", idjefe , id);
 		if (strcmp(buf, ATACAR) == 0) atacar_nave();
 		else if (strcmp(buf, MOVER_ALEATORIO) == 0) mover_nave();
 		else if (strcmp(buf, DESTRUIR) == 0) destruir_nave();
 		else {
-			perror("Error nave inválido");
+			printf("Error nave mensaje inválido: %s", buf);
 			destruir_nave();
 		}
 	}
